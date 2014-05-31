@@ -56,6 +56,8 @@ char *ap6210_gpio_wifi_get_name(int module_sel) {
 	return(mod_name[module_sel]);
 }
 
+EXPORT_SYMBOL(ap6210_gpio_wifi_get_name);
+
 static int ap6210_gpio_ctrl(char* name, int level)
 {
 	int i = 0;	
