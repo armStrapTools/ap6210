@@ -43,8 +43,9 @@ typedef const struct si_pub	si_t;
 #include <wlioctl.h>
 
 
-#include <wl_dbg.h>
 #include <wl_iw.h>
+
+#include <ap6210.h>
 
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
@@ -424,7 +425,7 @@ wl_iw_send_priv_event(
 	strcpy(extra, flag);
 	wrqu.data.length = strlen(extra);
 	wireless_send_event(dev, cmd, &wrqu, extra);
-	WL_TRACE(("Send IWEVCUSTOM Event as %s\n", extra));
+	AP6210_DEBUG("Send IWEVCUSTOM Event as %s\n", extra);
 
 	return 0;
 }
@@ -441,7 +442,7 @@ wl_iw_config_commit(
 	int error;
 	struct sockaddr bssid;
 
-	WL_TRACE(("%s: SIOCSIWCOMMIT\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWCOMMIT\n", dev->name);
 
 	if ((error = dev_wlc_ioctl(dev, WLC_GET_SSID, &ssid, sizeof(ssid))))
 		return error;
@@ -453,7 +454,7 @@ wl_iw_config_commit(
 
 	bzero(&bssid, sizeof(struct sockaddr));
 	if ((error = dev_wlc_ioctl(dev, WLC_REASSOC, &bssid, ETHER_ADDR_LEN))) {
-		WL_ERROR(("%s: WLC_REASSOC failed (%d)\n", __FUNCTION__, error));
+		AP6210_ERR("%s: WLC_REASSOC failed (%d)\n", __FUNCTION__, error);
 		return error;
 	}
 
@@ -472,7 +473,7 @@ wl_iw_get_name(
 	uint band[3];
 	char cap[5];
 
-	WL_TRACE(("%s: SIOCGIWNAME\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWNAME\n", dev->name);
 
 	cap[0] = 0;
 	if ((err = dev_wlc_ioctl(dev, WLC_GET_PHYTYPE, &phytype, sizeof(phytype))) < 0)
@@ -518,7 +519,7 @@ wl_iw_set_freq(
 	int error, chan;
 	uint sf = 0;
 
-	WL_TRACE(("%s: SIOCSIWFREQ\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWFREQ\n", dev->name);
 
 	/* Setting by channel number */
 	if (fwrq->e == 0 && fwrq->m < MAXCHANNEL) {
@@ -561,7 +562,7 @@ wl_iw_get_freq(
 	channel_info_t ci;
 	int error;
 
-	WL_TRACE(("%s: SIOCGIWFREQ\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWFREQ\n", dev->name);
 
 	if ((error = dev_wlc_ioctl(dev, WLC_GET_CHANNEL, &ci, sizeof(ci))))
 		return error;
@@ -582,7 +583,7 @@ wl_iw_set_mode(
 {
 	int infra = 0, ap = 0, error = 0;
 
-	WL_TRACE(("%s: SIOCSIWMODE\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWMODE\n", dev->name);
 
 	switch (*uwrq) {
 	case IW_MODE_MASTER:
@@ -618,7 +619,7 @@ wl_iw_get_mode(
 {
 	int error, infra = 0, ap = 0;
 
-	WL_TRACE(("%s: SIOCGIWMODE\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWMODE\n", dev->name);
 
 	if ((error = dev_wlc_ioctl(dev, WLC_GET_INFRA, &infra, sizeof(infra))) ||
 	    (error = dev_wlc_ioctl(dev, WLC_GET_AP, &ap, sizeof(ap))))
@@ -655,7 +656,7 @@ wl_iw_get_range(
 		{27, 54, 81, 108, 162, 216, 243, 270},
 		{30, 60, 90, 120, 180, 240, 270, 300}};
 
-	WL_TRACE(("%s: SIOCGIWRANGE\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWRANGE\n", dev->name);
 
 	if (!extra)
 		return -EINVAL;
@@ -859,7 +860,7 @@ wl_iw_set_spy(
 	struct sockaddr *addr = (struct sockaddr *) extra;
 	int i;
 
-	WL_TRACE(("%s: SIOCSIWSPY\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWSPY\n", dev->name);
 
 	if (!extra)
 		return -EINVAL;
@@ -885,7 +886,7 @@ wl_iw_get_spy(
 	struct iw_quality *qual = (struct iw_quality *) &addr[iw->spy_num];
 	int i;
 
-	WL_TRACE(("%s: SIOCGIWSPY\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWSPY\n", dev->name);
 
 	if (!extra)
 		return -EINVAL;
@@ -911,10 +912,10 @@ wl_iw_set_wap(
 {
 	int error = -EINVAL;
 
-	WL_TRACE(("%s: SIOCSIWAP\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWAP\n", dev->name);
 
 	if (awrq->sa_family != ARPHRD_ETHER) {
-		WL_ERROR(("%s: Invalid Header...sa_family\n", __FUNCTION__));
+		AP6210_ERR("%s: Invalid Header...sa_family\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
@@ -923,7 +924,7 @@ wl_iw_set_wap(
 		scb_val_t scbval;
 		bzero(&scbval, sizeof(scb_val_t));
 		if ((error = dev_wlc_ioctl(dev, WLC_DISASSOC, &scbval, sizeof(scb_val_t)))) {
-			WL_ERROR(("%s: WLC_DISASSOC failed (%d).\n", __FUNCTION__, error));
+			AP6210_ERR("%s: WLC_DISASSOC failed (%d).\n", __FUNCTION__, error);
 		}
 		return 0;
 	}
@@ -932,7 +933,7 @@ wl_iw_set_wap(
 	 */
 	/* Reassociate to the specified AP */
 	if ((error = dev_wlc_ioctl(dev, WLC_REASSOC, awrq->sa_data, ETHER_ADDR_LEN))) {
-		WL_ERROR(("%s: WLC_REASSOC failed (%d).\n", __FUNCTION__, error));
+		AP6210_ERR("%s: WLC_REASSOC failed (%d).\n", __FUNCTION__, error);
 		return error;
 	}
 
@@ -947,7 +948,7 @@ wl_iw_get_wap(
 	char *extra
 )
 {
-	WL_TRACE(("%s: SIOCGIWAP\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWAP\n", dev->name);
 
 	awrq->sa_family = ARPHRD_ETHER;
 	memset(awrq->sa_data, 0, ETHER_ADDR_LEN);
@@ -971,11 +972,11 @@ wl_iw_mlme(
 	scb_val_t scbval;
 	int error  = -EINVAL;
 
-	WL_TRACE(("%s: SIOCSIWMLME\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWMLME\n", dev->name);
 
 	mlme = (struct iw_mlme *)extra;
 	if (mlme == NULL) {
-		WL_ERROR(("Invalid ioctl data.\n"));
+		AP6210_ERR("Invalid ioctl data.\n");
 		return error;
 	}
 
@@ -992,7 +993,7 @@ wl_iw_mlme(
 			sizeof(scb_val_t));
 	}
 	else {
-		WL_ERROR(("%s: Invalid ioctl data.\n", __FUNCTION__));
+		AP6210_ERR("%s: Invalid ioctl data.\n", __FUNCTION__);
 		return error;
 	}
 
@@ -1015,7 +1016,7 @@ wl_iw_get_aplist(
 	int error, i;
 	uint buflen = dwrq->length;
 
-	WL_TRACE(("%s: SIOCGIWAPLIST\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWAPLIST\n", dev->name);
 
 	if (!extra)
 		return -EINVAL;
@@ -1027,7 +1028,7 @@ wl_iw_get_aplist(
 	memset(list, 0, buflen);
 	list->buflen = htod32(buflen);
 	if ((error = dev_wlc_ioctl(dev, WLC_SCAN_RESULTS, list, buflen))) {
-		WL_ERROR(("%d: Scan results error %d\n", __LINE__, error));
+		AP6210_ERR("%d: Scan results error %d\n", __LINE__, error);
 		kfree(list);
 		return error;
 	}
@@ -1090,7 +1091,7 @@ wl_iw_iscan_get_aplist(
 	wl_bss_info_t *bi = NULL;
 	int i;
 
-	WL_TRACE(("%s: SIOCGIWAPLIST\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWAPLIST\n", dev->name);
 
 	if (!extra)
 		return -EINVAL;
@@ -1153,7 +1154,7 @@ wl_iw_set_scan(
 {
 	wlc_ssid_t ssid;
 
-	WL_TRACE(("%s: SIOCSIWSCAN\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWSCAN\n", dev->name);
 
 	/* default Broadcast scan */
 	memset(&ssid, 0, sizeof(ssid));
@@ -1186,7 +1187,7 @@ wl_iw_iscan_set_scan(
 	wlc_ssid_t ssid;
 	iscan_info_t *iscan = g_iscan;
 
-	WL_TRACE(("%s: SIOCSIWSCAN\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWSCAN\n", dev->name);
 
 	/* use backup if our thread is not successful */
 	if ((!iscan) || (iscan->sysioc_pid < 0)) {
@@ -1346,7 +1347,7 @@ wl_iw_get_scan(
 	char *event = extra, *end = extra + dwrq->length, *value;
 	uint buflen = dwrq->length;
 
-	WL_TRACE(("%s: SIOCGIWSCAN\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWSCAN\n", dev->name);
 
 	if (!extra)
 		return -EINVAL;
@@ -1468,7 +1469,7 @@ wl_iw_iscan_get_scan(
 	iscan_info_t *iscan = g_iscan;
 	iscan_buf_t * p_buf;
 
-	WL_TRACE(("%s: SIOCGIWSCAN\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWSCAN\n", dev->name);
 
 	if (!extra)
 		return -EINVAL;
@@ -1489,7 +1490,7 @@ wl_iw_iscan_get_scan(
 	    list = &((wl_iscan_results_t*)p_buf->iscan_buf)->results;
 
 	    if (list->version != WL_BSS_INFO_VERSION) {
-		WL_ERROR(("list->version %d != WL_BSS_INFO_VERSION\n", list->version));
+		AP6210_ERR("list->version %d != WL_BSS_INFO_VERSION\n", list->version);
 	    }
 
 	    bi = NULL;
@@ -1591,7 +1592,7 @@ wl_iw_set_essid(
 	wlc_ssid_t ssid;
 	int error;
 
-	WL_TRACE(("%s: SIOCSIWESSID\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWESSID\n", dev->name);
 
 	/* default Broadcast SSID */
 	memset(&ssid, 0, sizeof(ssid));
@@ -1628,13 +1629,13 @@ wl_iw_get_essid(
 	wlc_ssid_t ssid;
 	int error;
 
-	WL_TRACE(("%s: SIOCGIWESSID\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWESSID\n", dev->name);
 
 	if (!extra)
 		return -EINVAL;
 
 	if ((error = dev_wlc_ioctl(dev, WLC_GET_SSID, &ssid, sizeof(ssid)))) {
-		WL_ERROR(("Error getting the SSID\n"));
+		AP6210_ERR("Error getting the SSID\n");
 		return error;
 	}
 
@@ -1659,7 +1660,7 @@ wl_iw_set_nick(
 )
 {
 	wl_iw_t *iw = IW_DEV_IF(dev);
-	WL_TRACE(("%s: SIOCSIWNICKN\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWNICKN\n", dev->name);
 
 	if (!extra)
 		return -EINVAL;
@@ -1683,7 +1684,7 @@ wl_iw_get_nick(
 )
 {
 	wl_iw_t *iw = IW_DEV_IF(dev);
-	WL_TRACE(("%s: SIOCGIWNICKN\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWNICKN\n", dev->name);
 
 	if (!extra)
 		return -EINVAL;
@@ -1704,7 +1705,7 @@ static int wl_iw_set_rate(
 	wl_rateset_t rateset;
 	int error, rate, i, error_bg, error_a;
 
-	WL_TRACE(("%s: SIOCSIWRATE\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWRATE\n", dev->name);
 
 	/* Get current rateset */
 	if ((error = dev_wlc_ioctl(dev, WLC_GET_CURR_RATESET, &rateset, sizeof(rateset))))
@@ -1769,7 +1770,7 @@ static int wl_iw_get_rate(
 {
 	int error, rate;
 
-	WL_TRACE(("%s: SIOCGIWRATE\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWRATE\n", dev->name);
 
 	/* Report the current tx rate */
 	if ((error = dev_wlc_ioctl(dev, WLC_GET_RATE, &rate, sizeof(rate))))
@@ -1790,7 +1791,7 @@ wl_iw_set_rts(
 {
 	int error, rts;
 
-	WL_TRACE(("%s: SIOCSIWRTS\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWRTS\n", dev->name);
 
 	if (vwrq->disabled)
 		rts = DOT11_DEFAULT_RTS_LEN;
@@ -1815,7 +1816,7 @@ wl_iw_get_rts(
 {
 	int error, rts;
 
-	WL_TRACE(("%s: SIOCGIWRTS\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWRTS\n", dev->name);
 
 	if ((error = dev_wlc_intvar_get(dev, "rtsthresh", &rts)))
 		return error;
@@ -1837,7 +1838,7 @@ wl_iw_set_frag(
 {
 	int error, frag;
 
-	WL_TRACE(("%s: SIOCSIWFRAG\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWFRAG\n", dev->name);
 
 	if (vwrq->disabled)
 		frag = DOT11_DEFAULT_FRAG_LEN;
@@ -1862,7 +1863,7 @@ wl_iw_get_frag(
 {
 	int error, fragthreshold;
 
-	WL_TRACE(("%s: SIOCGIWFRAG\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWFRAG\n", dev->name);
 
 	if ((error = dev_wlc_intvar_get(dev, "fragthresh", &fragthreshold)))
 		return error;
@@ -1884,7 +1885,7 @@ wl_iw_set_txpow(
 {
 	int error, disable;
 	uint16 txpwrmw;
-	WL_TRACE(("%s: SIOCSIWTXPOW\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWTXPOW\n", dev->name);
 
 	/* Make sure radio is off or on as far as software is concerned */
 	disable = vwrq->disabled ? WL_RADIO_SW_DISABLE : 0;
@@ -1925,7 +1926,7 @@ wl_iw_get_txpow(
 	int error, disable, txpwrdbm;
 	uint8 result;
 
-	WL_TRACE(("%s: SIOCGIWTXPOW\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWTXPOW\n", dev->name);
 
 	if ((error = dev_wlc_ioctl(dev, WLC_GET_RADIO, &disable, sizeof(disable))) ||
 	    (error = dev_wlc_intvar_get(dev, "qtxpower", &txpwrdbm)))
@@ -1952,7 +1953,7 @@ wl_iw_set_retry(
 {
 	int error, lrl, srl;
 
-	WL_TRACE(("%s: SIOCSIWRETRY\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWRETRY\n", dev->name);
 
 	/* Do not handle "off" or "lifetime" */
 	if (vwrq->disabled || (vwrq->flags & IW_RETRY_LIFETIME))
@@ -1999,7 +2000,7 @@ wl_iw_get_retry(
 {
 	int error, lrl, srl;
 
-	WL_TRACE(("%s: SIOCGIWRETRY\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWRETRY\n", dev->name);
 
 	vwrq->disabled = 0;      /* Can't be disabled */
 
@@ -2041,7 +2042,7 @@ wl_iw_set_encode(
 	wl_wsec_key_t key;
 	int error, val, wsec;
 
-	WL_TRACE(("%s: SIOCSIWENCODE\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWENCODE\n", dev->name);
 
 	memset(&key, 0, sizeof(key));
 
@@ -2130,7 +2131,7 @@ wl_iw_get_encode(
 	wl_wsec_key_t key;
 	int error, val, wsec, auth;
 
-	WL_TRACE(("%s: SIOCGIWENCODE\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWENCODE\n", dev->name);
 
 	/* assure default values of zero for things we don't touch */
 	bzero(&key, sizeof(wl_wsec_key_t));
@@ -2192,7 +2193,7 @@ wl_iw_set_power(
 {
 	int error, pm;
 
-	WL_TRACE(("%s: SIOCSIWPOWER\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWPOWER\n", dev->name);
 
 	pm = vwrq->disabled ? PM_OFF : PM_MAX;
 
@@ -2213,7 +2214,7 @@ wl_iw_get_power(
 {
 	int error, pm;
 
-	WL_TRACE(("%s: SIOCGIWPOWER\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWPOWER\n", dev->name);
 
 	if ((error = dev_wlc_ioctl(dev, WLC_GET_PM, &pm, sizeof(pm))))
 		return error;
@@ -2247,7 +2248,7 @@ wl_iw_get_wpaie(
 	char *extra
 )
 {
-	WL_TRACE(("%s: SIOCGIWGENIE\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWGENIE\n", dev->name);
 	iwp->length = 64;
 	dev_wlc_bufvar_get(dev, "wpaie", extra, iwp->length);
 	return 0;
@@ -2265,7 +2266,7 @@ wl_iw_set_encodeext(
 	int error;
 	struct iw_encode_ext *iwe;
 
-	WL_TRACE(("%s: SIOCSIWENCODEEXT\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWENCODEEXT\n", dev->name);
 
 	memset(&key, 0, sizeof(key));
 	iwe = (struct iw_encode_ext *)extra;
@@ -2289,7 +2290,7 @@ wl_iw_set_encodeext(
 	/* check for key index change */
 	if (key.len == 0) {
 		if (iwe->ext_flags & IW_ENCODE_EXT_SET_TX_KEY) {
-			WL_WSEC(("Changing the the primary Key to %d\n", key.index));
+			AP6210_DEBUG("Changing the the primary Key to %d\n", key.index);
 			/* change the key index .... */
 			key.index = htod32(key.index);
 			error = dev_wlc_ioctl(dev, WLC_SET_KEY_PRIMARY,
@@ -2337,9 +2338,9 @@ wl_iw_set_encodeext(
 		if (iwe->key_len > sizeof(key.data))
 			return -EINVAL;
 
-		WL_WSEC(("Setting the key index %d\n", key.index));
+		AP6210_DEBUG("Setting the key index %d\n", key.index);
 		if (iwe->ext_flags & IW_ENCODE_EXT_SET_TX_KEY) {
-			WL_WSEC(("key is a Primary Key\n"));
+			AP6210_DEBUG("key is a Primary Key\n");
 			key.flags = WL_PRIMARY_KEY;
 		}
 
@@ -2411,11 +2412,11 @@ wl_iw_set_pmksa(
 	char eabuf[ETHER_ADDR_STR_LEN];
 	pmkid_t * pmkid_array = pmkid_list.pmkids.pmkid;
 
-	WL_TRACE(("%s: SIOCSIWPMKSA\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWPMKSA\n", dev->name);
 	iwpmksa = (struct iw_pmksa *)extra;
 	bzero((char *)eabuf, ETHER_ADDR_STR_LEN);
 	if (iwpmksa->cmd == IW_PMKSA_FLUSH) {
-		WL_TRACE(("wl_iw_set_pmksa - IW_PMKSA_FLUSH\n"));
+		AP6210_DEBUG("wl_iw_set_pmksa - IW_PMKSA_FLUSH\n");
 		bzero((char *)&pmkid_list, sizeof(pmkid_list));
 	}
 	if (iwpmksa->cmd == IW_PMKSA_REMOVE) {
@@ -2425,12 +2426,12 @@ wl_iw_set_pmksa(
 		bcopy(&iwpmksa->pmkid[0], &pmkidptr->pmkid[0].PMKID, WPA2_PMKID_LEN);
 		{
 			uint j;
-			WL_TRACE(("wl_iw_set_pmksa,IW_PMKSA_REMOVE - PMKID: %s = ",
+			AP6210_DEBUG("wl_iw_set_pmksa,IW_PMKSA_REMOVE - PMKID: %s = ",
 				bcm_ether_ntoa(&pmkidptr->pmkid[0].BSSID,
-				eabuf)));
+				eabuf));
 			for (j = 0; j < WPA2_PMKID_LEN; j++)
-				WL_TRACE(("%02x ", pmkidptr->pmkid[0].PMKID[j]));
-			WL_TRACE(("\n"));
+				AP6210_DUMP("%02x ", pmkidptr->pmkid[0].PMKID[j]);
+			AP6210_DUMP("\n");
 		}
 		for (i = 0; i < pmkid_list.pmkids.npmkid; i++)
 			if (!bcmp(&iwpmksa->bssid.sa_data[0], &pmkid_array[i].BSSID,
@@ -2457,26 +2458,26 @@ wl_iw_set_pmksa(
 			uint k;
 			k = pmkid_list.pmkids.npmkid;
 			BCM_REFERENCE(k);
-			WL_TRACE(("wl_iw_set_pmksa,IW_PMKSA_ADD - PMKID: %s = ",
+			AP6210_DEBUG("wl_iw_set_pmksa,IW_PMKSA_ADD - PMKID: %s = ",
 				bcm_ether_ntoa(&pmkid_array[k].BSSID,
-				eabuf)));
+				eabuf));
 			for (j = 0; j < WPA2_PMKID_LEN; j++)
-				WL_TRACE(("%02x ", pmkid_array[k].PMKID[j]));
-			WL_TRACE(("\n"));
+				AP6210_DUMP("%02x ", pmkid_array[k].PMKID[j]);
+			AP6210_DUMP("\n");
 		}
 		pmkid_list.pmkids.npmkid++;
 	}
-	WL_TRACE(("PRINTING pmkid LIST - No of elements %d\n", pmkid_list.pmkids.npmkid));
+	AP6210_DEBUG("PRINTING pmkid LIST - No of elements %d\n", pmkid_list.pmkids.npmkid);
 	for (i = 0; i < pmkid_list.pmkids.npmkid; i++) {
 		uint j;
-		WL_TRACE(("PMKID[%d]: %s = ", i,
+		AP6210_DEBUG("PMKID[%d]: %s = ", i,
 			bcm_ether_ntoa(&pmkid_array[i].BSSID,
-			eabuf)));
+			eabuf));
 		for (j = 0; j < WPA2_PMKID_LEN; j++)
-			WL_TRACE(("%02x ", pmkid_array[i].PMKID[j]));
-		printf("\n");
+			AP6210_DUMP("%02x ", pmkid_array[i].PMKID[j]);
+		AP6210_DEBUG("\n");
 	}
-	WL_TRACE(("\n"));
+	AP6210_DEBUG("\n");
 	dev_wlc_bufvar_set(dev, "pmkid_info", (char *)&pmkid_list, sizeof(pmkid_list));
 	return 0;
 }
@@ -2490,7 +2491,7 @@ wl_iw_get_encodeext(
 	char *extra
 )
 {
-	WL_TRACE(("%s: SIOCGIWENCODEEXT\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWENCODEEXT\n", dev->name);
 	return 0;
 }
 
@@ -2509,13 +2510,13 @@ wl_iw_set_wpaauth(
 	int val = 0;
 	wl_iw_t *iw = IW_DEV_IF(dev);
 
-	WL_TRACE(("%s: SIOCSIWAUTH\n", dev->name));
+	AP6210_DEBUG("%s: SIOCSIWAUTH\n", dev->name);
 
 	paramid = vwrq->flags & IW_AUTH_INDEX;
 	paramval = vwrq->value;
 
-	WL_TRACE(("%s: SIOCSIWAUTH, paramid = 0x%0x, paramval = 0x%0x\n",
-		dev->name, paramid, paramval));
+	AP6210_DEBUG("%s: SIOCSIWAUTH, paramid = 0x%0x, paramval = 0x%0x\n",
+		dev->name, paramid, paramval);
 
 	switch (paramid) {
 
@@ -2527,7 +2528,7 @@ wl_iw_set_wpaauth(
 			val = WPA_AUTH_PSK | WPA_AUTH_UNSPECIFIED;
 		else if (paramval & IW_AUTH_WPA_VERSION_WPA2)
 			val = WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED;
-		WL_TRACE(("%s: %d: setting wpa_auth to 0x%0x\n", __FUNCTION__, __LINE__, val));
+		AP6210_DEBUG("%s: %d: setting wpa_auth to 0x%0x\n", __FUNCTION__, __LINE__, val);
 		if ((error = dev_wlc_intvar_set(dev, "wpa_auth", val)))
 			return error;
 		break;
@@ -2555,15 +2556,15 @@ wl_iw_set_wpaauth(
 			val |= AES_ENABLED;
 
 		if (iw->privacy_invoked && !val) {
-			WL_WSEC(("%s: %s: 'Privacy invoked' TRUE but clearing wsec, assuming "
-			         "we're a WPS enrollee\n", dev->name, __FUNCTION__));
+			AP6210_DEBUG("%s: %s: 'Privacy invoked' TRUE but clearing wsec, assuming "
+			         "we're a WPS enrollee\n", dev->name, __FUNCTION__);
 			if ((error = dev_wlc_intvar_set(dev, "is_WPS_enrollee", TRUE))) {
-				WL_WSEC(("Failed to set iovar is_WPS_enrollee\n"));
+				AP6210_DEBUG("Failed to set iovar is_WPS_enrollee\n");
 				return error;
 			}
 		} else if (val) {
 			if ((error = dev_wlc_intvar_set(dev, "is_WPS_enrollee", FALSE))) {
-				WL_WSEC(("Failed to clear iovar is_WPS_enrollee\n"));
+				AP6210_DEBUG("Failed to clear iovar is_WPS_enrollee\n");
 				return error;
 			}
 		}
@@ -2598,7 +2599,7 @@ wl_iw_set_wpaauth(
 			else
 				val = WPA2_AUTH_UNSPECIFIED;
 		}
-		WL_TRACE(("%s: %d: setting wpa_auth to %d\n", __FUNCTION__, __LINE__, val));
+		AP6210_DEBUG("%s: %d: setting wpa_auth to %d\n", __FUNCTION__, __LINE__, val);
 		if ((error = dev_wlc_intvar_set(dev, "wpa_auth", val)))
 			return error;
 		break;
@@ -2609,7 +2610,7 @@ wl_iw_set_wpaauth(
 
 	case IW_AUTH_80211_AUTH_ALG:
 		/* open shared */
-		WL_ERROR(("Setting the D11auth %d\n", paramval));
+		AP6210_ERR("Setting the D11auth %d\n", paramval);
 		if (paramval & IW_AUTH_ALG_OPEN_SYSTEM)
 			val = 0;
 		else if (paramval & IW_AUTH_ALG_SHARED_KEY)
@@ -2623,7 +2624,7 @@ wl_iw_set_wpaauth(
 	case IW_AUTH_WPA_ENABLED:
 		if (paramval == 0) {
 			val = 0;
-			WL_TRACE(("%s: %d: setting wpa_auth to %d\n", __FUNCTION__, __LINE__, val));
+			AP6210_DEBUG("%s: %d: setting wpa_auth to %d\n", __FUNCTION__, __LINE__, val);
 			error = dev_wlc_intvar_set(dev, "wpa_auth", val);
 			return error;
 		}
@@ -2643,7 +2644,7 @@ wl_iw_set_wpaauth(
 #if WIRELESS_EXT > 17
 
 	case IW_AUTH_ROAMING_CONTROL:
-		WL_TRACE(("%s: IW_AUTH_ROAMING_CONTROL\n", __FUNCTION__));
+		AP6210_DEBUG("%s: IW_AUTH_ROAMING_CONTROL\n", __FUNCTION__);
 		/* driver control or user space app control */
 		break;
 
@@ -2653,7 +2654,7 @@ wl_iw_set_wpaauth(
 		if (paramval == 0) {
 			iw->privacy_invoked = FALSE;
 			if ((error = dev_wlc_intvar_set(dev, "is_WPS_enrollee", FALSE))) {
-				WL_WSEC(("Failed to clear iovar is_WPS_enrollee\n"));
+				AP6210_DEBUG("Failed to clear iovar is_WPS_enrollee\n");
 				return error;
 			}
 		} else {
@@ -2664,12 +2665,12 @@ wl_iw_set_wpaauth(
 			if (!WSEC_ENABLED(wsec)) {
 				/* if privacy is true, but wsec is false, we are a WPS enrollee */
 				if ((error = dev_wlc_intvar_set(dev, "is_WPS_enrollee", TRUE))) {
-					WL_WSEC(("Failed to set iovar is_WPS_enrollee\n"));
+					AP6210_DEBUG("Failed to set iovar is_WPS_enrollee\n");
 					return error;
 				}
 			} else {
 				if ((error = dev_wlc_intvar_set(dev, "is_WPS_enrollee", FALSE))) {
-					WL_WSEC(("Failed to clear iovar is_WPS_enrollee\n"));
+					AP6210_DEBUG("Failed to clear iovar is_WPS_enrollee\n");
 					return error;
 				}
 			}
@@ -2702,7 +2703,7 @@ wl_iw_get_wpaauth(
 	int val;
 	wl_iw_t *iw = IW_DEV_IF(dev);
 
-	WL_TRACE(("%s: SIOCGIWAUTH\n", dev->name));
+	AP6210_DEBUG("%s: SIOCGIWAUTH\n", dev->name);
 
 	paramid = vwrq->flags & IW_AUTH_INDEX;
 
@@ -2770,7 +2771,7 @@ wl_iw_get_wpaauth(
 #if WIRELESS_EXT > 17
 
 	case IW_AUTH_ROAMING_CONTROL:
-		WL_ERROR(("%s: IW_AUTH_ROAMING_CONTROL\n", __FUNCTION__));
+		AP6210_ERR("%s: IW_AUTH_ROAMING_CONTROL\n", __FUNCTION__);
 		/* driver control or user space app control */
 		break;
 
@@ -3078,7 +3079,7 @@ wl_iw_conn_status_str(uint32 event_type, uint32 status, uint32 reason,
 		memset(stringBuf, 0, buflen);
 		snprintf(stringBuf, buflen, "%s %s %02d %02d",
 			name, cause, status, reason);
-		WL_TRACE(("Connection status: %s\n", stringBuf));
+		AP6210_DEBUG("Connection status: %s\n", stringBuf);
 		return TRUE;
 	} else {
 		return FALSE;
@@ -3161,7 +3162,7 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 			wrqu.data.length = datalen + 1;
 			extra[0] = WLC_E_ACTION_FRAME;
 			memcpy(&extra[1], data, datalen);
-			WL_TRACE(("WLC_E_ACTION_FRAME len %d \n", wrqu.data.length));
+			AP6210_DEBUG("WLC_E_ACTION_FRAME len %d \n", wrqu.data.length);
 		}
 		break;
 
@@ -3171,7 +3172,7 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 			wrqu.data.length = sizeof(status) + 1;
 			extra[0] = WLC_E_ACTION_FRAME_COMPLETE;
 			memcpy(&extra[1], &status, sizeof(status));
-			WL_TRACE(("wl_iw_event status %d  \n", status));
+			AP6210_DEBUG("wl_iw_event status %d  \n", status);
 		}
 		break;
 #endif /* WIRELESS_EXT > 14 */
@@ -3236,7 +3237,7 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 #if WIRELESS_EXT > 14
 		cmd = SIOCGIWSCAN;
 #endif
-		WL_TRACE(("event WLC_E_SCAN_COMPLETE\n"));
+		AP6210_DEBUG("event WLC_E_SCAN_COMPLETE\n");
 		if ((g_iscan) && (g_iscan->sysioc_pid >= 0) &&
 			(g_iscan->iscan_state != ISCAN_STATE_IDLE))
 			up(&g_iscan->sysioc_sem);
@@ -3282,14 +3283,14 @@ int wl_iw_get_wireless_stats(struct net_device *dev, struct iw_statistics *wstat
 		goto done;
 
 	phy_noise = dtoh32(phy_noise);
-	WL_TRACE(("wl_iw_get_wireless_stats phy noise=%d\n *****", phy_noise));
+	AP6210_DEBUG("wl_iw_get_wireless_stats phy noise=%d\n *****", phy_noise);
 
 	scb_val.val = 0;
 	if ((res = dev_wlc_ioctl(dev, WLC_GET_RSSI, &scb_val, sizeof(scb_val_t))))
 		goto done;
 
 	rssi = dtoh32(scb_val.val);
-	WL_TRACE(("wl_iw_get_wireless_stats rssi=%d ****** \n", rssi));
+	AP6210_DEBUG("wl_iw_get_wireless_stats rssi=%d ****** \n", rssi);
 	if (rssi <= WL_IW_RSSI_NO_SIGNAL)
 		wstats->qual.qual = 0;
 	else if (rssi <= WL_IW_RSSI_VERY_LOW)
@@ -3313,20 +3314,20 @@ int wl_iw_get_wireless_stats(struct net_device *dev, struct iw_statistics *wstat
 #endif /* WIRELESS_EXT > 18 */
 
 #if WIRELESS_EXT > 11
-	WL_TRACE(("wl_iw_get_wireless_stats counters=%d\n *****", (int)sizeof(wl_cnt_t)));
+	AP6210_DEBUG("wl_iw_get_wireless_stats counters=%d\n *****", (int)sizeof(wl_cnt_t));
 
 	memset(&cnt, 0, sizeof(wl_cnt_t));
 	res = dev_wlc_bufvar_get(dev, "counters", (char *)&cnt, sizeof(wl_cnt_t));
 	if (res)
 	{
-		WL_ERROR(("wl_iw_get_wireless_stats counters failed error=%d ****** \n", res));
+		AP6210_ERR("wl_iw_get_wireless_stats counters failed error=%d ****** \n", res);
 		goto done;
 	}
 
 	cnt.version = dtoh16(cnt.version);
 	if (cnt.version != WL_CNT_T_VERSION) {
-		WL_TRACE(("\tIncorrect version of counters struct: expected %d; got %d\n",
-			WL_CNT_T_VERSION, cnt.version));
+		AP6210_DEBUG("\tIncorrect version of counters struct: expected %d; got %d\n",
+			WL_CNT_T_VERSION, cnt.version);
 		goto done;
 	}
 
@@ -3337,15 +3338,15 @@ int wl_iw_get_wireless_stats(struct net_device *dev, struct iw_statistics *wstat
 	wstats->discard.misc = dtoh32(cnt.rxrunt) + dtoh32(cnt.rxgiant);
 	wstats->miss.beacon = 0;
 
-	WL_TRACE(("wl_iw_get_wireless_stats counters txframe=%d txbyte=%d\n",
-		dtoh32(cnt.txframe), dtoh32(cnt.txbyte)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters rxfrmtoolong=%d\n", dtoh32(cnt.rxfrmtoolong)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters rxbadplcp=%d\n", dtoh32(cnt.rxbadplcp)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters rxundec=%d\n", dtoh32(cnt.rxundec)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters rxfragerr=%d\n", dtoh32(cnt.rxfragerr)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters txfail=%d\n", dtoh32(cnt.txfail)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters rxrunt=%d\n", dtoh32(cnt.rxrunt)));
-	WL_TRACE(("wl_iw_get_wireless_stats counters rxgiant=%d\n", dtoh32(cnt.rxgiant)));
+	AP6210_DEBUG("wl_iw_get_wireless_stats counters txframe=%d txbyte=%d\n",
+		dtoh32(cnt.txframe), dtoh32(cnt.txbyte));
+	AP6210_DEBUG("wl_iw_get_wireless_stats counters rxfrmtoolong=%d\n", dtoh32(cnt.rxfrmtoolong));
+	AP6210_DEBUG("wl_iw_get_wireless_stats counters rxbadplcp=%d\n", dtoh32(cnt.rxbadplcp));
+	AP6210_DEBUG("wl_iw_get_wireless_stats counters rxundec=%d\n", dtoh32(cnt.rxundec));
+	AP6210_DEBUG("wl_iw_get_wireless_stats counters rxfragerr=%d\n", dtoh32(cnt.rxfragerr));
+	AP6210_DEBUG("wl_iw_get_wireless_stats counters txfail=%d\n", dtoh32(cnt.txfail));
+	AP6210_DEBUG("wl_iw_get_wireless_stats counters rxrunt=%d\n", dtoh32(cnt.rxrunt));
+	AP6210_DEBUG("wl_iw_get_wireless_stats counters rxgiant=%d\n", dtoh32(cnt.rxgiant));
 
 #endif /* WIRELESS_EXT > 11 */
 
@@ -3359,7 +3360,7 @@ wl_iw_timerfunc(ulong data)
 	iscan_info_t *iscan = (iscan_info_t *)data;
 	iscan->timer_on = 0;
 	if (iscan->iscan_state != ISCAN_STATE_IDLE) {
-		WL_TRACE(("timer trigger\n"));
+		AP6210_DEBUG("timer trigger\n");
 		up(&iscan->sysioc_sem);
 	}
 }
@@ -3484,9 +3485,9 @@ wl_iw_iscan_get(iscan_info_t *iscan)
 	results->buflen = dtoh32(results->buflen);
 	results->version = dtoh32(results->version);
 	results->count = dtoh32(results->count);
-	WL_TRACE(("results->count = %d\n", results->count));
+	AP6210_DEBUG("results->count = %d\n", results->count);
 
-	WL_TRACE(("results->buflen = %d\n", results->buflen));
+	AP6210_DEBUG("results->buflen = %d\n", results->buflen);
 	status = dtoh32(list_buf->status);
 	return status;
 }
@@ -3526,7 +3527,7 @@ _iscan_sysioc_thread(void *data)
 
 		switch (status) {
 			case WL_SCAN_RESULTS_PARTIAL:
-				WL_TRACE(("iscanresults incomplete\n"));
+				AP6210_DEBUG("iscanresults incomplete\n");
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
 				rtnl_lock();
 #endif
@@ -3541,24 +3542,24 @@ _iscan_sysioc_thread(void *data)
 				iscan->timer_on = 1;
 				break;
 			case WL_SCAN_RESULTS_SUCCESS:
-				WL_TRACE(("iscanresults complete\n"));
+				AP6210_DEBUG("iscanresults complete\n");
 				iscan->iscan_state = ISCAN_STATE_IDLE;
 				wl_iw_send_scan_complete(iscan);
 				break;
 			case WL_SCAN_RESULTS_PENDING:
-				WL_TRACE(("iscanresults pending\n"));
+				AP6210_DEBUG("iscanresults pending\n");
 				/* Reschedule the timer */
 				iscan->timer.expires = jiffies + msecs_to_jiffies(iscan->timer_ms);
 				add_timer(&iscan->timer);
 				iscan->timer_on = 1;
 				break;
 			case WL_SCAN_RESULTS_ABORTED:
-				WL_TRACE(("iscanresults aborted\n"));
+				AP6210_DEBUG("iscanresults aborted\n");
 				iscan->iscan_state = ISCAN_STATE_IDLE;
 				wl_iw_send_scan_complete(iscan);
 				break;
 			default:
-				WL_TRACE(("iscanresults returned unknown status %d\n", status));
+				AP6210_DEBUG("iscanresults returned unknown status %d\n", status);
 				break;
 		 }
 	}

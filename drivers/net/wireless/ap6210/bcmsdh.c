@@ -45,6 +45,8 @@
 
 #include <sdio.h>	/* SDIO Device and Protocol Specs */
 
+#include <ap6210.h>
+
 #define SDIOH_API_ACCESS_RETRY_LIMIT	2
 const uint bcmsdh_msglevel = BCMSDH_ERROR_VAL;
 
@@ -81,7 +83,7 @@ bcmsdh_config_hw_oob_intr(bcmsdh_info_t *sdh, uint chip)
 {
 	uint32 gpiocontrol, addr;
 
- 	printf("%s: Enter\n", __FUNCTION__);
+ 	AP6210_DEBUG("%s: Enter\n", __FUNCTION__);
 	if (CHIPID(chip) == BCM43362_CHIP_ID) {
 		addr = SI_ENUM_BASE + OFFSETOF(chipcregs_t, gpiocontrol);
 		gpiocontrol = bcmsdh_reg_read(sdh, addr, 4);

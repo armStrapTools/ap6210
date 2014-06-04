@@ -27,15 +27,6 @@
 #ifndef __BCMSDH_SDMMC_H__
 #define __BCMSDH_SDMMC_H__
 
-#define sd_err(x)   printf x
-#define sd_trace(x)
-#define sd_info(x)
-#define sd_debug(x)
-#define sd_data(x)
-#define sd_ctrl(x)
-
-#define sd_trace_hw4	sd_trace
-
 #define sd_sync_dma(sd, read, nbytes)
 #define sd_init_dma(sd)
 #define sd_ack_intr(sd)
@@ -44,13 +35,6 @@
 /* Allocate/init/free per-OS private data */
 extern int sdioh_sdmmc_osinit(sdioh_info_t *sd);
 extern void sdioh_sdmmc_osfree(sdioh_info_t *sd);
-
-#define sd_log(x)
-
-#define SDIOH_ASSERT(exp) \
-	do { if (!(exp)) \
-		printf("!!!ASSERT fail: file %s lines %d", __FILE__, __LINE__); \
-	} while (0)
 
 #define BLOCK_SIZE_4318 64
 #define BLOCK_SIZE_4328 512

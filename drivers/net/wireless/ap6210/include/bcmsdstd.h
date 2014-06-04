@@ -1,4 +1,4 @@
-/*
+0/*
  *  'Standard' SDIO HOST CONTROLLER driver
  *
  * Copyright (C) 1999-2012, Broadcom Corporation
@@ -26,15 +26,6 @@
 #ifndef	_BCM_SD_STD_H
 #define	_BCM_SD_STD_H
 
-/* global msglevel for debug messages - bitvals come from sdiovar.h */
-#define sd_err(x)	do { if (sd_msglevel & SDH_ERROR_VAL) printf x; } while (0)
-#define sd_trace(x)
-#define sd_info(x)
-#define sd_debug(x)
-#define sd_data(x)
-#define sd_ctrl(x)
-#define sd_dma(x)
-
 #define sd_sync_dma(sd, read, nbytes)
 #define sd_init_dma(sd)
 #define sd_ack_intr(sd)
@@ -42,13 +33,6 @@
 /* Allocate/init/free per-OS private data */
 extern int sdstd_osinit(sdioh_info_t *sd);
 extern void sdstd_osfree(sdioh_info_t *sd);
-
-#define sd_log(x)
-
-#define SDIOH_ASSERT(exp) \
-	do { if (!(exp)) \
-		printf("!!!ASSERT fail: file %s lines %d", __FILE__, __LINE__); \
-	} while (0)
 
 #define BLOCK_SIZE_4318 64
 #define BLOCK_SIZE_4328 512

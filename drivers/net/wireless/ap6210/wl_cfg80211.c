@@ -60,6 +60,8 @@
 #include <wl_cfgp2p.h>
 #include <wl_android.h>
 
+#include <ap6210.h>
+
 #ifdef PROP_TXSTATUS
 #include <dhd_wlfc.h>
 #endif
@@ -478,7 +480,7 @@ int dhd_start_xmit(struct sk_buff *skb, struct net_device *net);
 do {									\
 	struct net_device *ndev = wl_to_prmry_ndev(wlpriv);       	\
 	if (unlikely(!wl_get_drv_status(wlpriv, READY, ndev))) {	\
-		WL_INFO(("device is not ready\n"));			\
+		AP6210_DEBUG("device is not ready\n");			\
 		return -EIO;						\
 	}								\
 } while (0)
@@ -667,8 +669,8 @@ wl_chspec_from_legacy(chanspec_t legacy_chspec)
 	}
 
 	if (wf_chspec_malformed(chspec)) {
-		WL_ERR(("wl_chspec_from_legacy: output chanspec (0x%04X) malformed\n",
-		        chspec));
+		AP6210_ERR("wl_chspec_from_legacy: output chanspec (0x%04X) malformed\n",
+		        chspec);
 		return INVCHANSPEC;
 	}
 
@@ -684,8 +686,8 @@ wl_chspec_to_legacy(chanspec_t chspec)
 	chanspec_t lchspec;
 
 	if (wf_chspec_malformed(chspec)) {
-		WL_ERR(("wl_chspec_to_legacy: input chanspec (0x%04X) malformed\n",
-		        chspec));
+		AP6210_ERR("wl_chspec_to_legacy: input chanspec (0x%04X) malformed\n",
+		        chspec);
 		return INVCHANSPEC;
 	}
 
@@ -713,10 +715,10 @@ wl_chspec_to_legacy(chanspec_t chspec)
 	} else {
 		/* cannot express the bandwidth */
 		char chanbuf[CHANSPEC_STR_LEN];
-		WL_ERR((
+		AP6210_ERR(
 		        "wl_chspec_to_legacy: unable to convert chanspec %s (0x%04X) "
 		        "to pre-11ac format\n",
-		        wf_chspec_ntoa(chspec, chanbuf), chspec));
+		        wf_chspec_ntoa(chspec, chanbuf), chspec);
 		return INVCHANSPEC;
 	}
 
@@ -864,16 +866,16 @@ wl_validate_wps_ie(char *wps_ie, s32 wps_ie_len, bool *pbc)
 	u16 val;
 	u8 *valptr = (uint8*) &val;
 	if (wps_ie == NULL || wps_ie_len < WPS_IE_FIXED_LEN) {
-		WL_ERR(("invalid argument : NULL\n"));
+		AP6210_ERR("invalid argument : NULL\n"));
 		return;
 	}
 	len = (u16)wps_ie[TLV_LEN_OFF];
 
 	if (len > wps_ie_len) {
-		WL_ERR(("invalid length len %d, wps ie len %d\n", len, wps_ie_len));
+		AP6210_ERR("invalid length len %d, wps ie len %d\n", len, wps_ie_len);
 		return;
 	}
-	WL_DBG(("wps_ie len=%d\n", len));
+	AP6210_DEBUG("wps_ie len=%d\n", len);
 	len -= 4;	/* for the WPS IE's OUI, oui_type fields */
 	subel = wps_ie + WPS_IE_FIXED_LEN;
 	while (len >= 4) {		/* must have attr id, attr len fields */
@@ -887,49 +889,49 @@ wl_validate_wps_ie(char *wps_ie, s32 wps_ie_len, bool *pbc)
 
 		len -= 4;			/* for the attr id, attr len fields */
 		len -= subelt_len;	/* for the remaining fields in this attribute */
-		WL_DBG((" subel=%p, subelt_id=0x%x subelt_len=%u\n",
-			subel, subelt_id, subelt_len));
+		AP6210_DEBUG(" subel=%p, subelt_id=0x%x subelt_len=%u\n",
+			subel, subelt_id, subelt_len);
 
 		if (subelt_id == WPS_ID_VERSION) {
-			WL_DBG(("  attr WPS_ID_VERSION: %u\n", *subel));
+			AP6210_DEBUG("  attr WPS_ID_VERSION: %u\n", *subel);
 		} else if (subelt_id == WPS_ID_REQ_TYPE) {
-			WL_DBG(("  attr WPS_ID_REQ_TYPE: %u\n", *subel));
+			AP6210_DEBUG("  attr WPS_ID_REQ_TYPE: %u\n", *subel);
 		} else if (subelt_id == WPS_ID_CONFIG_METHODS) {
 			valptr[0] = *subel;
 			valptr[1] = *(subel + 1);
-			WL_DBG(("  attr WPS_ID_CONFIG_METHODS: %x\n", HTON16(val)));
+			AP6210_DEBUG("  attr WPS_ID_CONFIG_METHODS: %x\n", HTON16(val));
 		} else if (subelt_id == WPS_ID_DEVICE_NAME) {
 			char devname[100];
 			memcpy(devname, subel, subelt_len);
 			devname[subelt_len] = '\0';
-			WL_DBG(("  attr WPS_ID_DEVICE_NAME: %s (len %u)\n",
-				devname, subelt_len));
+			AP6210_DEBUG("  attr WPS_ID_DEVICE_NAME: %s (len %u)\n",
+				devname, subelt_len);
 		} else if (subelt_id == WPS_ID_DEVICE_PWD_ID) {
 			valptr[0] = *subel;
 			valptr[1] = *(subel + 1);
-			WL_DBG(("  attr WPS_ID_DEVICE_PWD_ID: %u\n", HTON16(val)));
+			AP6210_DEBUG("  attr WPS_ID_DEVICE_PWD_ID: %u\n", HTON16(val));
 			*pbc = (HTON16(val) == DEV_PW_PUSHBUTTON) ? true : false;
 		} else if (subelt_id == WPS_ID_PRIM_DEV_TYPE) {
 			valptr[0] = *subel;
 			valptr[1] = *(subel + 1);
-			WL_DBG(("  attr WPS_ID_PRIM_DEV_TYPE: cat=%u \n", HTON16(val)));
+			AP6210_DEBUG("  attr WPS_ID_PRIM_DEV_TYPE: cat=%u \n", HTON16(val));
 			valptr[0] = *(subel + 6);
 			valptr[1] = *(subel + 7);
-			WL_DBG(("  attr WPS_ID_PRIM_DEV_TYPE: subcat=%u\n", HTON16(val)));
+			AP6210_DEBUG("  attr WPS_ID_PRIM_DEV_TYPE: subcat=%u\n", HTON16(val));
 		} else if (subelt_id == WPS_ID_REQ_DEV_TYPE) {
 			valptr[0] = *subel;
 			valptr[1] = *(subel + 1);
-			WL_DBG(("  attr WPS_ID_REQ_DEV_TYPE: cat=%u\n", HTON16(val)));
+			AP6210_DEBUG("  attr WPS_ID_REQ_DEV_TYPE: cat=%u\n", HTON16(val));
 			valptr[0] = *(subel + 6);
 			valptr[1] = *(subel + 7);
-			WL_DBG(("  attr WPS_ID_REQ_DEV_TYPE: subcat=%u\n", HTON16(val)));
+			AP6210_DEBUG("  attr WPS_ID_REQ_DEV_TYPE: subcat=%u\n", HTON16(val));
 		} else if (subelt_id == WPS_ID_SELECTED_REGISTRAR_CONFIG_METHODS) {
 			valptr[0] = *subel;
 			valptr[1] = *(subel + 1);
-			WL_DBG(("  attr WPS_ID_SELECTED_REGISTRAR_CONFIG_METHODS"
-				": cat=%u\n", HTON16(val)));
+			AP6210_DEBUG("  attr WPS_ID_SELECTED_REGISTRAR_CONFIG_METHODS"
+				": cat=%u\n", HTON16(val));
 		} else {
-			WL_DBG(("  unknown attr 0x%x\n", subelt_id));
+			AP6210_DEBUG("  unknown attr 0x%x\n", subelt_id);
 		}
 
 		subel += subelt_len;
@@ -951,7 +953,7 @@ static chanspec_t wl_cfg80211_get_shared_freq(struct wiphy *wiphy)
 		 * channel . Later proper channel will be applied by the above framework
 		 * via set_channel (cfg80211 API).
 		 */
-		WL_DBG(("Not associated. Return a temp channel. \n"));
+		AP6210_DEBUG("Not associated. Return a temp channel. \n");
 		return wl_ch_host_to_driver(WL_P2P_TEMP_CHAN);
 	}
 
@@ -959,13 +961,13 @@ static chanspec_t wl_cfg80211_get_shared_freq(struct wiphy *wiphy)
 	*(u32 *) wl->extra_buf = htod32(WL_EXTRA_BUF_MAX);
 	if ((err = wldev_ioctl(dev, WLC_GET_BSS_INFO, wl->extra_buf,
 		WL_EXTRA_BUF_MAX, false))) {
-			WL_ERR(("Failed to get associated bss info, use temp channel \n"));
+			AP6210_ERR("Failed to get associated bss info, use temp channel \n");
 			chspec = wl_ch_host_to_driver(WL_P2P_TEMP_CHAN);
 	}
 	else {
 			bss = (struct wl_bss_info *) (wl->extra_buf + 4);
 			chspec =  bss->chanspec;
-			WL_DBG(("Valid BSS Found. chanspec:%d \n", chspec));
+			AP6210_DEBUG("Valid BSS Found. chanspec:%d \n", chspec);
 	}
 	return chspec;
 }
@@ -973,13 +975,13 @@ static chanspec_t wl_cfg80211_get_shared_freq(struct wiphy *wiphy)
 static struct net_device* wl_cfg80211_add_monitor_if(char *name)
 {
 #if defined(WLP2P) && defined(WL_ENABLE_P2P_IF)
-	WL_INFO(("wl_cfg80211_add_monitor_if: No more support monitor interface\n"));
+	AP6210_DEBUG("wl_cfg80211_add_monitor_if: No more support monitor interface\n");
 	return ERR_PTR(-EOPNOTSUPP);
 #else
 	struct net_device* ndev = NULL;
 
 	dhd_add_monitor(name, &ndev);
-	WL_INFO(("wl_cfg80211_add_monitor_if net device returned: 0x%p\n", ndev));
+	AP6210_DEBUG("wl_cfg80211_add_monitor_if net device returned: 0x%p\n", ndev);
 	return ndev;
 #endif /* defined(WLP2P) && defined(WL_ENABLE_P2P_IF) */
 }
@@ -1017,13 +1019,13 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 	/* Use primary I/F for sending cmds down to firmware */
 	_ndev = wl_to_prmry_ndev(wl);
 
-	WL_DBG(("if name: %s, type: %d\n", name, type));
+	AP6210_DEBUG("if name: %s, type: %d\n", name, type);
 	switch (type) {
 	case NL80211_IFTYPE_ADHOC:
 	case NL80211_IFTYPE_AP_VLAN:
 	case NL80211_IFTYPE_WDS:
 	case NL80211_IFTYPE_MESH_POINT:
-		WL_ERR(("Unsupported interface type\n"));
+		AP6210_ERR("Unsupported interface type\n");
 		mode = WL_MODE_IBSS;
 		return NULL;
 	case NL80211_IFTYPE_MONITOR:
@@ -1039,13 +1041,13 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 		mode = WL_MODE_AP;
 		break;
 	default:
-		WL_ERR(("Unsupported interface type\n"));
+		AP6210_ERR("Unsupported interface type\n");
 		return NULL;
 		break;
 	}
 
 	if (!name) {
-		WL_ERR(("name is NULL\n"));
+		AP6210_ERR("name is NULL\n");
 		return NULL;
 	}
 	if (wl->p2p_supported && (wlif_type != -1)) {
@@ -1057,8 +1059,8 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 				rtnl_unlock();
 				rollback_lock = true;
 			}
-			WL_INFO(("%s: Released the lock and wait till IF_DEL is complete\n",
-				__func__));
+			AP6210_DEBUG("%s: Released the lock and wait till IF_DEL is complete\n",
+				__func__);
 			timeout = wait_event_interruptible_timeout(wl->netif_change_event,
 				(wl_get_p2p_status(wl, IF_DELETING) == false),
 				msecs_to_jiffies(MAX_WAIT_TIME));
@@ -1069,10 +1071,10 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 				rollback_lock = false;
 			}
 			if (timeout > 0) {
-				WL_ERR(("IF DEL is Success\n"));
+				AP6210_ERR("IF DEL is Success\n");
 
 			} else {
-				WL_ERR(("timeount < 0, return -EAGAIN\n"));
+				AP6210_ERR("timeount < 0, return -EAGAIN\n");
 				return ERR_PTR(-EAGAIN);
 			}
 			/* It should be now be safe to put this check here since we are sure
@@ -1108,7 +1110,7 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 			dhd_wlfc_init(dhd);
 			err = wldev_ioctl(_ndev, WLC_UP, &up, sizeof(s32), true);
 			if (err < 0)
-				WL_ERR(("WLC_UP return err:%d\n", err));
+				AP6210_ERR("WLC_UP return err:%d\n", err);
 			wl->wlfc_on = true;
 		}
 #endif /* PROP_TXSTATUS_VSDB */
@@ -1128,7 +1130,7 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 		err = wl_cfgp2p_ifadd(wl, &wl->p2p->int_addr, htod32(wlif_type), chspec);
 
 		if (unlikely(err)) {
-			WL_ERR((" virtual iface add failed (%d) \n", err));
+			AP6210_ERR(" virtual iface add failed (%d) \n", err);
 			return ERR_PTR(-ENOMEM);
 		}
 
@@ -1140,12 +1142,12 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 			struct wireless_dev *vwdev;
 			vwdev = kzalloc(sizeof(*vwdev), GFP_KERNEL);
 			if (unlikely(!vwdev)) {
-				WL_ERR(("Could not allocate wireless device\n"));
+				AP6210_ERR("Could not allocate wireless device\n");
 				return ERR_PTR(-ENOMEM);
 			}
 			vwdev->wiphy = wl->wdev->wiphy;
-			WL_INFO((" virtual interface(%s) is created memalloc done \n",
-				wl->p2p->vir_ifname));
+			AP6210_DEBUG(" virtual interface(%s) is created memalloc done \n",
+				wl->p2p->vir_ifname);
 			vwdev->iftype = type;
 			_ndev =  wl_to_p2p_bss_ndev(wl, P2PAPI_BSSCFG_CONNECTION);
 			_ndev->ieee80211_ptr = vwdev;
@@ -1164,8 +1166,8 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 				val = 1;
 				/* Disable firmware roaming for P2P interface  */
 				wldev_iovar_setint(_ndev, "roam_off", val);
-				WL_ERR((" virtual interface(%s) is "
-					"created net attach done\n", wl->p2p->vir_ifname));
+				AP6210_ERR(" virtual interface(%s) is "
+					"created net attach done\n", wl->p2p->vir_ifname);
 				if (mode == WL_MODE_AP)
 					wl_set_drv_status(wl, CONNECTED, _ndev);
 				if (type == NL80211_IFTYPE_P2P_CLIENT)
@@ -1186,7 +1188,7 @@ wl_cfg80211_add_virtual_iface(struct wiphy *wiphy, char *name,
 
 		} else {
 			wl_clr_p2p_status(wl, IF_ADD);
-			WL_ERR((" virtual interface(%s) is not created \n", wl->p2p->vir_ifname));
+			AP6210_ERR(" virtual interface(%s) is not created \n", wl->p2p->vir_ifname);
 			memset(wl->p2p->vir_ifname, '\0', IFNAMSIZ);
 			wl->p2p->vif_created = false;
 #ifdef PROP_TXSTATUS_VSDB
@@ -1211,7 +1213,7 @@ wl_cfg80211_del_virtual_iface(struct wiphy *wiphy, struct net_device *dev)
 	struct wl_priv *wl = wiphy_priv(wiphy);
 	s32 timeout = -1;
 	s32 ret = 0;
-	WL_DBG(("Enter\n"));
+	AP6210_DEBUG("Enter\n");
 
 	if (wl->p2p_net == dev) {
 		/* Since there is no ifidx corresponding to p2p0, cmds to
@@ -1225,7 +1227,7 @@ wl_cfg80211_del_virtual_iface(struct wiphy *wiphy, struct net_device *dev)
 
 		/* Clear GO_NEG_PHASE bit to take care of GO-NEG-FAIL cases
 		 */
-		WL_DBG(("P2P: GO_NEG_PHASE status cleared "));
+		AP6210_DEBUG("P2P: GO_NEG_PHASE status cleared ");
 		wl_clr_p2p_status(wl, GO_NEG_PHASE);
 		if (wl->p2p->vif_created) {
 			if (wl_get_drv_status(wl, SCANNING, dev)) {
@@ -1236,7 +1238,7 @@ wl_cfg80211_del_virtual_iface(struct wiphy *wiphy, struct net_device *dev)
 			/* for GC */
 			if (wl_get_drv_status(wl, DISCONNECTING, dev) &&
 				(wl_get_mode_by_netdev(wl, dev) != WL_MODE_AP)) {
-				WL_ERR(("Wait for Link Down event for GC !\n"));
+				AP6210_ERR("Wait for Link Down event for GC !\n");
 				wait_for_completion_timeout
 					(&wl->iface_disable, msecs_to_jiffies(500));
 			}
@@ -1252,7 +1254,7 @@ wl_cfg80211_del_virtual_iface(struct wiphy *wiphy, struct net_device *dev)
 				   do not wait for link down of ap mode
 				 */
 				if (ret == 0) {
-					WL_ERR(("Wait for Link Down event for GO !!!\n"));
+					AP6210_ERR("Wait for Link Down event for GO !!!\n");
 					wait_for_completion_timeout(&wl->iface_disable,
 						msecs_to_jiffies(500));
 				} else {
@@ -1271,8 +1273,8 @@ wl_cfg80211_del_virtual_iface(struct wiphy *wiphy, struct net_device *dev)
 			/* Request framework to RESET and clean up */
 			if (ret) {
 				struct net_device *ndev = wl_to_prmry_ndev(wl);
-				WL_ERR(("Firmware returned an error (%d) from p2p_ifdel"
-					"HANG Notification sent to %s\n", ret, ndev->name));
+				AP6210_ERR("Firmware returned an error (%d) from p2p_ifdel"
+					"HANG Notification sent to %s\n", ret, ndev->name);
 				net_os_send_hang_message(ndev);
 			}
 			/* Wait for IF_DEL operation to be finished in firmware */
@@ -1280,9 +1282,9 @@ wl_cfg80211_del_virtual_iface(struct wiphy *wiphy, struct net_device *dev)
 				(wl->p2p->vif_created == false),
 				msecs_to_jiffies(MAX_WAIT_TIME));
 			if (timeout > 0 && (wl->p2p->vif_created == false)) {
-				WL_DBG(("IFDEL operation done\n"));
+				AP6210_DEBUG("IFDEL operation done\n");
 			} else {
-				WL_ERR(("IFDEL didn't complete properly\n"));
+				AP6210_ERR("IFDEL didn't complete properly\n");
 			}
 			ret = dhd_del_monitor(dev);
 		}
@@ -1302,14 +1304,14 @@ wl_cfg80211_change_virtual_iface(struct wiphy *wiphy, struct net_device *ndev,
 	chanspec_t chspec;
 	struct wl_priv *wl = wiphy_priv(wiphy);
 	dhd_pub_t *dhd = (dhd_pub_t *)(wl->pub);
-	WL_DBG(("Enter type %d\n", type));
+	AP6210_DEBUG("Enter type %d\n", type);
 	switch (type) {
 	case NL80211_IFTYPE_MONITOR:
 	case NL80211_IFTYPE_WDS:
 	case NL80211_IFTYPE_MESH_POINT:
 		ap = 1;
-		WL_ERR(("type (%d) : currently we do not support this type\n",
-			type));
+		AP6210_ERR("type (%d) : currently we do not support this type\n",
+			type);
 		break;
 	case NL80211_IFTYPE_ADHOC:
 		mode = WL_MODE_IBSS;
@@ -1333,8 +1335,8 @@ wl_cfg80211_change_virtual_iface(struct wiphy *wiphy, struct net_device *ndev,
 	if (ap) {
 		wl_set_mode_by_netdev(wl, ndev, mode);
 		if (wl->p2p_supported && wl->p2p->vif_created) {
-			WL_DBG(("p2p_vif_created (%d) p2p_on (%d)\n", wl->p2p->vif_created,
-			p2p_on(wl)));
+			AP6210_DEBUG("p2p_vif_created (%d) p2p_on (%d)\n", wl->p2p->vif_created,
+			p2p_on(wl));
 			wldev_iovar_setint(ndev, "mpc", 0);
 			wl_notify_escan_complete(wl, ndev, true, true);
 
@@ -1345,8 +1347,8 @@ wl_cfg80211_change_virtual_iface(struct wiphy *wiphy, struct net_device *ndev,
 			chspec = wl_cfg80211_get_shared_freq(wiphy);
 
 			wlif_type = WL_P2P_IF_GO;
-			WL_ERR(("%s : ap (%d), infra (%d), iftype: (%d)\n",
-				ndev->name, ap, infra, type));
+			AP6210_ERR("%s : ap (%d), infra (%d), iftype: (%d)\n",
+				ndev->name, ap, infra, type);
 			wl_set_p2p_status(wl, IF_CHANGING);
 			wl_clr_p2p_status(wl, IF_CHANGED);
 			wl_cfgp2p_ifchange(wl, &wl->p2p->int_addr, htod32(wlif_type), chspec);
@@ -1365,15 +1367,15 @@ wl_cfg80211_change_virtual_iface(struct wiphy *wiphy, struct net_device *ndev,
 			wl_set_drv_status(wl, AP_CREATING, ndev);
 			if (!wl->ap_info &&
 				!(wl->ap_info = kzalloc(sizeof(struct ap_info), GFP_KERNEL))) {
-				WL_ERR(("struct ap_saved_ie allocation failed\n"));
+				AP6210_ERR("struct ap_saved_ie allocation failed\n");
 				return -ENOMEM;
 			}
 		} else {
-			WL_ERR(("Cannot change the interface for GO or SOFTAP\n"));
+			AP6210_ERR("Cannot change the interface for GO or SOFTAP\n");
 			return -EINVAL;
 		}
 	} else {
-		WL_DBG(("Change_virtual_iface for transition from GO/AP to client/STA"));
+		AP6210_DEBUG("Change_virtual_iface for transition from GO/AP to client/STA");
 	}
 
 	ndev->ieee80211_ptr->iftype = type;
@@ -1386,14 +1388,14 @@ wl_cfg80211_notify_ifadd(struct net_device *ndev, s32 idx, s32 bssidx,
 {
 	struct wl_priv *wl = wlcfg_drv_priv;
 	s32 ret = BCME_OK;
-	WL_DBG(("Enter"));
+	AP6210_DEBUG("Enter");
 	if (!ndev) {
-		WL_ERR(("net is NULL\n"));
+		AP6210_ERR("net is NULL\n");
 		return 0;
 	}
 	if (wl->p2p_supported && wl_get_p2p_status(wl, IF_ADD)) {
-		WL_DBG(("IF_ADD event called from dongle, old interface name: %s,"
-			"new name: %s\n", ndev->name, wl->p2p->vir_ifname));
+		AP6210_DEBUG("IF_ADD event called from dongle, old interface name: %s,"
+			"new name: %s\n", ndev->name, wl->p2p->vir_ifname);
 		/* Assign the net device to CONNECT BSSCFG */
 		strncpy(ndev->name, wl->p2p->vir_ifname, IFNAMSIZ - 1);
 		wl_to_p2p_bss_ndev(wl, P2PAPI_BSSCFG_CONNECTION) = ndev;
@@ -1414,7 +1416,7 @@ wl_cfg80211_notify_ifdel(void)
 {
 	struct wl_priv *wl = wlcfg_drv_priv;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	wl_clr_p2p_status(wl, IF_DELETING);
 	wake_up_interruptible(&wl->netif_change_event);
 	return 0;
@@ -1430,7 +1432,7 @@ wl_cfg80211_ifdel_ops(struct net_device *ndev)
 	dhd_pub_t *dhd =  (dhd_pub_t *)(wl->pub);
 #endif /* PROP_TXSTATUS_VSDB */
 	if (!ndev || (strlen(ndev->name) == 0)) {
-		WL_ERR(("net is NULL\n"));
+		AP6210_ERR("net is NULL\n");
 		return 0;
 	}
 
@@ -1444,13 +1446,13 @@ wl_cfg80211_ifdel_ops(struct net_device *ndev)
 				rtnl_lock();
 				rollback_lock = true;
 			}
-			WL_DBG(("ESCAN COMPLETED\n"));
+			AP6210_DEBUG("ESCAN COMPLETED\n");
 			wl_notify_escan_complete(wl, ndev, true, false);
 			if (rollback_lock)
 				rtnl_unlock();
 		}
-		WL_ERR(("IF_DEL event called from dongle, net %x, vif name: %s\n",
-			(unsigned int)ndev, wl->p2p->vir_ifname));
+		AP6210_ERR("IF_DEL event called from dongle, net %x, vif name: %s\n",
+			(unsigned int)ndev, wl->p2p->vir_ifname);
 
 		memset(wl->p2p->vir_ifname, '\0', IFNAMSIZ);
 		index = wl_cfgp2p_find_idx(wl, ndev);
@@ -1458,7 +1460,7 @@ wl_cfg80211_ifdel_ops(struct net_device *ndev)
 		wl_to_p2p_bss_bssidx(wl, index) = WL_INVALID;
 		wl->p2p->vif_created = false;
 
-		WL_DBG(("index : %d\n", index));
+		AP6210_DEBUG("index : %d\n", index);
 #ifdef PROP_TXSTATUS_VSDB
 		if (dhd->wlfc_enabled && wl->wlfc_on) {
 			dhd->wlfc_enabled = false;
@@ -1522,21 +1524,21 @@ static s32 wl_find_listen_channel(struct wl_priv *wl,
 	pos = p2p_ie->subelts;
 	end = p2p_ie->subelts + (p2p_ie->len - 4);
 
-	CFGP2P_DBG((" found p2p ie ! lenth %d \n",
-		p2p_ie->len));
+	AP6210_DEBUG(" found p2p ie ! lenth %d \n",
+		p2p_ie->len);
 
 	while (pos < end) {
 		uint16 attr_len;
 		if (pos + 2 >= end) {
-			CFGP2P_DBG((" -- Invalid P2P attribute"));
+			AP6210_DEBUG(" -- Invalid P2P attribute");
 			return 0;
 		}
 		attr_len = ((uint16) (((pos + 1)[1] << 8) | (pos + 1)[0]));
 
 		if (pos + 3 + attr_len > end) {
-			CFGP2P_DBG(("P2P: Attribute underflow "
+			AP6210_DEBUG("P2P: Attribute underflow "
 				   "(len=%u left=%d)",
-				   attr_len, (int) (end - pos - 3)));
+				   attr_len, (int) (end - pos - 3));
 			return 0;
 		}
 
@@ -1552,7 +1554,7 @@ static s32 wl_find_listen_channel(struct wl_priv *wl,
 			if (listen_channel == SOCIAL_CHAN_1 ||
 				listen_channel == SOCIAL_CHAN_2 ||
 				listen_channel == SOCIAL_CHAN_3) {
-				CFGP2P_DBG((" Found my Listen Channel %d \n", listen_channel));
+				AP6210_DEBUG(" Found my Listen Channel %d \n", listen_channel);
 				return listen_channel;
 			}
 		}
@@ -1582,12 +1584,12 @@ static void wl_scan_prep(struct wl_scan_params *params, struct cfg80211_scan_req
 	params->channel_num = 0;
 	memset(&params->ssid, 0, sizeof(wlc_ssid_t));
 
-	WL_SCAN(("Preparing Scan request\n"));
-	WL_SCAN(("nprobes=%d\n", params->nprobes));
-	WL_SCAN(("active_time=%d\n", params->active_time));
-	WL_SCAN(("passive_time=%d\n", params->passive_time));
-	WL_SCAN(("home_time=%d\n", params->home_time));
-	WL_SCAN(("scan_type=%d\n", params->scan_type));
+	AP6210_DEBUG("Preparing Scan request\n");
+	AP6210_DEBUG("nprobes=%d\n", params->nprobes);
+	AP6210_DEBUG("active_time=%d\n", params->active_time);
+	AP6210_DEBUG("passive_time=%d\n", params->passive_time);
+	AP6210_DEBUG("home_time=%d\n", params->home_time);
+	AP6210_DEBUG("scan_type=%d\n", params->scan_type);
 
 	params->nprobes = htod32(params->nprobes);
 	params->active_time = htod32(params->active_time);
@@ -1602,7 +1604,7 @@ static void wl_scan_prep(struct wl_scan_params *params, struct cfg80211_scan_req
 	n_channels = request->n_channels;
 
 	/* Copy channel array if applicable */
-	WL_SCAN(("### List of channelspecs to scan ###\n"));
+	AP6210_DEBUG("### List of channelspecs to scan ###\n");
 	if (n_channels > 0) {
 		for (i = 0; i < n_channels; i++) {
 			chanspec = 0;
@@ -1616,7 +1618,7 @@ static void wl_scan_prep(struct wl_scan_params *params, struct cfg80211_scan_req
 			if (request->channels[i]->band == IEEE80211_BAND_2GHZ) {
 #ifdef WL_HOST_BAND_MGMT
 				if (wl->curr_band == WLC_BAND_5G) {
-					WL_DBG(("In 5G only mode, omit 2G channel:%d\n", channel));
+					AP6210_DEBUG("In 5G only mode, omit 2G channel:%d\n", channel);
 					continue;
 				}
 #endif /* WL_HOST_BAND_MGMT */
@@ -1624,7 +1626,7 @@ static void wl_scan_prep(struct wl_scan_params *params, struct cfg80211_scan_req
 			} else {
 #ifdef WL_HOST_BAND_MGMT
 				if (wl->curr_band == WLC_BAND_2G) {
-					WL_DBG(("In 2G only mode, omit 5G channel:%d\n", channel));
+					AP6210_DEBUG("In 2G only mode, omit 5G channel:%d\n", channel);
 					continue;
 				}
 #endif /* WL_HOST_BAND_MGMT */
@@ -1637,17 +1639,17 @@ static void wl_scan_prep(struct wl_scan_params *params, struct cfg80211_scan_req
 			params->channel_list[j] = channel;
 			params->channel_list[j] &= WL_CHANSPEC_CHAN_MASK;
 			params->channel_list[j] |= chanspec;
-			WL_SCAN(("Chan : %d, Channel spec: %x \n",
-				channel, params->channel_list[j]));
+			AP6210_DEBUG("Chan : %d, Channel spec: %x \n",
+				channel, params->channel_list[j]);
 			params->channel_list[j] = wl_chspec_host_to_driver(params->channel_list[j]);
 			j++;
 		}
 	} else {
-		WL_SCAN(("Scanning all channels\n"));
+		AP6210_DEBUG("Scanning all channels\n");
 	}
 	n_channels = j;
 	/* Copy ssid array if applicable */
-	WL_SCAN(("### List of SSIDs to scan ###\n"));
+	AP6210_DEBUG("### List of SSIDs to scan ###\n");
 	if (n_ssids > 0) {
 		offset = offsetof(wl_scan_params_t, channel_list) + n_channels * sizeof(u16);
 		offset = roundup(offset, sizeof(u32));
@@ -1657,15 +1659,15 @@ static void wl_scan_prep(struct wl_scan_params *params, struct cfg80211_scan_req
 			ssid.SSID_len = request->ssids[i].ssid_len;
 			memcpy(ssid.SSID, request->ssids[i].ssid, ssid.SSID_len);
 			if (!ssid.SSID_len)
-				WL_SCAN(("%d: Broadcast scan\n", i));
+				AP6210_DEBUG("%d: Broadcast scan\n", i);
 			else
-				WL_SCAN(("%d: scan  for  %s size =%d\n", i,
-				ssid.SSID, ssid.SSID_len));
+				AP6210_DEBUG("%d: scan  for  %s size =%d\n", i,
+				ssid.SSID, ssid.SSID_len);
 			memcpy(ptr, &ssid, sizeof(wlc_ssid_t));
 			ptr += sizeof(wlc_ssid_t);
 		}
 	} else {
-		WL_SCAN(("Broadcast scan\n"));
+		AP6210_DEBUG("Broadcast scan\n");
 	}
 	/* Adding mask to channel numbers */
 	params->channel_num =
@@ -1712,7 +1714,7 @@ wl_run_iscan(struct wl_iscan_ctrl *iscan, struct cfg80211_scan_request *request,
 	params->scan_duration = htod16(0);
 
 	if (params_size + sizeof("iscan") >= WLC_IOCTL_MEDLEN) {
-		WL_ERR(("ioctl buffer length is not sufficient\n"));
+		AP6210_ERR("ioctl buffer length is not sufficient\n");
 		err = -ENOMEM;
 		goto done;
 	}
@@ -1720,9 +1722,9 @@ wl_run_iscan(struct wl_iscan_ctrl *iscan, struct cfg80211_scan_request *request,
 		iscan->ioctl_buf, WLC_IOCTL_MEDLEN, NULL);
 	if (unlikely(err)) {
 		if (err == -EBUSY) {
-			WL_ERR(("system busy : iscan canceled\n"));
+			AP6210_ERR("system busy : iscan canceled\n");
 		} else {
-			WL_ERR(("error (%d)\n", err));
+			AP6210_ERR("error (%d)\n", err);
 		}
 	}
 
@@ -1745,7 +1747,7 @@ static s32 wl_do_iscan(struct wl_priv *wl, struct cfg80211_scan_request *request
 	err = wldev_ioctl(ndev, WLC_SET_PASSIVE_SCAN,
 		&passive_scan, sizeof(passive_scan), true);
 	if (unlikely(err)) {
-		WL_DBG(("error (%d)\n", err));
+		AP6210_DEBUG("error (%d)\n", err);
 		return err;
 	}
 	wl->iscan_kickstart = true;
@@ -1769,7 +1771,7 @@ wl_get_valid_channels(struct net_device *ndev, u8 *valid_chan_list, s32 size)
 	list->count = htod32(WL_NUMCHANNELS);
 	err = wldev_ioctl(ndev, WLC_GET_VALID_CHANNELS, valid_chan_list, size, false);
 	if (err != 0) {
-		WL_ERR(("get channels failed with %d\n", err));
+		AP6210_ERR("get channels failed with %d\n", err);
 	}
 
 	return err;
@@ -1794,7 +1796,7 @@ wl_run_escan(struct wl_priv *wl, struct net_device *ndev,
 	wl_uint32_list_t *list;
 	struct net_device *dev = NULL;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 
 	if (!wl) {
 		err = -EINVAL;
@@ -1802,7 +1804,7 @@ wl_run_escan(struct wl_priv *wl, struct net_device *ndev,
 	}
 	if (!wl->p2p_supported || !p2p_scan(wl)) {
 		/* LEGACY SCAN TRIGGER */
-		WL_SCAN((" LEGACY E-SCAN START\n"));
+		AP6210_DEBUG(" LEGACY E-SCAN START\n");
 
 		/* if scan request is not empty parse scan request paramters */
 		if (request != NULL) {
@@ -1830,7 +1832,7 @@ wl_run_escan(struct wl_priv *wl, struct net_device *ndev,
 		params->action =  htod16(action);
 		params->sync_id = htod16(0x1234);
 		if (params_size + sizeof("escan") >= WLC_IOCTL_MEDLEN) {
-			WL_ERR(("ioctl buffer length not sufficient\n"));
+			AP6210_ERR("ioctl buffer length not sufficient\n");
 			kfree(params);
 			err = -ENOMEM;
 			goto exit;
@@ -1840,9 +1842,9 @@ wl_run_escan(struct wl_priv *wl, struct net_device *ndev,
 		if (unlikely(err)) {
 			if (err == BCME_EPERM)
 				/* Scan Not permitted at this point of time */
-				WL_DBG((" Escan not permitted at this time (%d)\n", err));
+				AP6210_DEBUG(" Escan not permitted at this time (%d)\n", err);
 			else
-				WL_ERR((" Escan set error (%d)\n", err));
+				AP6210_ERR(" Escan set error (%d)\n", err);
 		}
 		kfree(params);
 	}
@@ -1852,11 +1854,11 @@ wl_run_escan(struct wl_priv *wl, struct net_device *ndev,
 		n_nodfs = 0;
 		if (request && request->n_channels) {
 			num_chans = request->n_channels;
-			WL_SCAN((" chann number : %d\n", num_chans));
+			AP6210_DEBUG(" chann number : %d\n", num_chans);
 			default_chan_list = kzalloc(num_chans * sizeof(*default_chan_list),
 				GFP_KERNEL);
 			if (default_chan_list == NULL) {
-				WL_ERR(("channel list allocation failed \n"));
+				AP6210_ERR("channel list allocation failed \n");
 				err = -ENOMEM;
 				goto exit;
 			}
@@ -1902,16 +1904,16 @@ wl_run_escan(struct wl_priv *wl, struct net_device *ndev,
 						(default_chan_list[2] == SOCIAL_CHAN_3))) {
 				/* SOCIAL CHANNELS 1, 6, 11 */
 				search_state = WL_P2P_DISC_ST_SEARCH;
-				WL_INFO(("P2P SEARCH PHASE START \n"));
+				AP6210_DEBUG("P2P SEARCH PHASE START \n");
 			} else if ((dev = wl_to_p2p_bss_ndev(wl, P2PAPI_BSSCFG_CONNECTION)) &&
 				(wl_get_mode_by_netdev(wl, dev) == WL_MODE_AP)) {
 				/* If you are already a GO, then do SEARCH only */
-				WL_INFO(("Already a GO. Do SEARCH Only"));
+				AP6210_DEBUG("Already a GO. Do SEARCH Only");
 				search_state = WL_P2P_DISC_ST_SEARCH;
 				num_chans = n_nodfs;
 
 			} else {
-				WL_INFO(("P2P SCAN STATE START \n"));
+				AP6210_DEBUG("P2P SCAN STATE START \n");
 				num_chans = n_nodfs;
 			}
 
@@ -1925,9 +1927,9 @@ exit:
 	if (unlikely(err)) {
 		/* Don't print Error incase of Scan suppress */
 		if ((err == BCME_EPERM) && wl->scan_suppressed)
-			WL_DBG(("Escan failed: Scan Suppressed \n"));
+			AP6210_DEBUG("Escan failed: Scan Suppressed \n");
 		else
-			WL_ERR(("error (%d)\n", err));
+			AP6210_ERR("error (%d)\n", err);
 	}
 	return err;
 }
@@ -1940,7 +1942,7 @@ wl_do_escan(struct wl_priv *wl, struct wiphy *wiphy, struct net_device *ndev,
 	s32 err = BCME_OK;
 	s32 passive_scan;
 	wl_scan_results_t *results;
-	WL_SCAN(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	mutex_lock(&wl->usr_sync);
 	results = (wl_scan_results_t *) wl->escan_info.escan_buf;
 	results->version = 0;
@@ -1954,7 +1956,7 @@ wl_do_escan(struct wl_priv *wl, struct wiphy *wiphy, struct net_device *ndev,
 	err = wldev_ioctl(ndev, WLC_SET_PASSIVE_SCAN,
 		&passive_scan, sizeof(passive_scan), true);
 	if (unlikely(err)) {
-		WL_ERR(("error (%d)\n", err));
+		AP6210_ERR("error (%d)\n", err);
 		goto exit;
 	}
 
@@ -1996,31 +1998,31 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 	}
 
 	if (WL_DRV_STATUS_SENDING_AF_FRM_EXT(wl)) {
-		WL_ERR(("Sending Action Frames. Try it again.\n"));
+		AP6210_ERR("Sending Action Frames. Try it again.\n");
 		return -EAGAIN;
 	}
 
-	WL_DBG(("Enter wiphy (%p)\n", wiphy));
+	AP6210_DEBUG("Enter wiphy (%p)\n", wiphy);
 	if (wl_get_drv_status_all(wl, SCANNING)) {
 		if (wl->scan_request == NULL) {
 			wl_clr_drv_status_all(wl, SCANNING);
-			WL_DBG(("<<<<<<<<<<<Force Clear Scanning Status>>>>>>>>>>>\n"));
+			AP6210_DEBUG("<<<<<<<<<<<Force Clear Scanning Status>>>>>>>>>>>\n");
 		} else {
-			WL_ERR(("Scanning already\n"));
+			AP6210_ERR("Scanning already\n");
 			return -EAGAIN;
 		}
 	}
 	if (wl_get_drv_status(wl, SCAN_ABORTING, ndev)) {
-		WL_ERR(("Scanning being aborted\n"));
+		AP6210_ERR("Scanning being aborted\n");
 		return -EAGAIN;
 	}
 	if (request && request->n_ssids > WL_SCAN_PARAMS_SSID_MAX) {
-		WL_ERR(("request null or n_ssids > WL_SCAN_PARAMS_SSID_MAX\n"));
+		AP6210_ERR("request null or n_ssids > WL_SCAN_PARAMS_SSID_MAX\n");
 		return -EOPNOTSUPP;
 	}
 #ifdef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
 	if (wl_get_drv_status_all(wl, REMAINING_ON_CHANNEL)) {
-		WL_DBG(("Remain_on_channel bit is set, somehow it didn't get cleared\n"));
+		AP6210_DEBUG("Remain_on_channel bit is set, somehow it didn't get cleared\n");
 		wl_notify_escan_complete(wl, ndev, true, true);
 	}
 #endif /* WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
@@ -2054,7 +2056,7 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 							&wl->p2p->dev_addr, &wl->p2p->int_addr);
 					}
 					wl_clr_p2p_status(wl, GO_NEG_PHASE);
-					WL_DBG(("P2P: GO_NEG_PHASE status cleared \n"));
+					AP6210_DEBUG("P2P: GO_NEG_PHASE status cleared \n");
 					p2p_scan(wl) = true;
 				}
 			} else {
@@ -2158,27 +2160,27 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 		if (sr->ssid.SSID_len) {
 			memcpy(sr->ssid.SSID, ssids->ssid, sr->ssid.SSID_len);
 			sr->ssid.SSID_len = htod32(sr->ssid.SSID_len);
-			WL_SCAN(("Specific scan ssid=\"%s\" len=%d\n",
-				sr->ssid.SSID, sr->ssid.SSID_len));
+			AP6210_DEBUG("Specific scan ssid=\"%s\" len=%d\n",
+				sr->ssid.SSID, sr->ssid.SSID_len);
 		} else {
-			WL_SCAN(("Broadcast scan\n"));
+			AP6210_DEBUG("Broadcast scan\n");
 		}
-		WL_SCAN(("sr->ssid.SSID_len (%d)\n", sr->ssid.SSID_len));
+		AP6210_DEBUG("sr->ssid.SSID_len (%d)\n", sr->ssid.SSID_len);
 		passive_scan = wl->active_scan ? 0 : 1;
 		err = wldev_ioctl(ndev, WLC_SET_PASSIVE_SCAN,
 			&passive_scan, sizeof(passive_scan), true);
 		if (unlikely(err)) {
-			WL_SCAN(("WLC_SET_PASSIVE_SCAN error (%d)\n", err));
+			AP6210_DEBUG("WLC_SET_PASSIVE_SCAN error (%d)\n", err);
 			goto scan_out;
 		}
 		err = wldev_ioctl(ndev, WLC_SCAN, &sr->ssid,
 			sizeof(sr->ssid), false);
 		if (err) {
 			if (err == -EBUSY) {
-				WL_ERR(("system busy : scan for \"%s\" "
-					"canceled\n", sr->ssid.SSID));
+				AP6210_ERR("system busy : scan for \"%s\" "
+					"canceled\n", sr->ssid.SSID);
 			} else {
-				WL_ERR(("WLC_SCAN error (%d)\n", err));
+				AP6210_ERR("WLC_SCAN error (%d)\n", err);
 			}
 			goto scan_out;
 		}
@@ -2193,7 +2195,7 @@ scan_success:
 scan_out:
 
 	if (err == BCME_BUSY || err == BCME_NOTREADY) {
-		WL_ERR(("Scan err = (%d), busy?%d", err, -EBUSY));
+		AP6210_ERR("Scan err = (%d), busy?%d", err, -EBUSY);
 		err = -EBUSY;
 	}
 
@@ -2203,7 +2205,7 @@ scan_out:
 			struct ether_addr bssid;
 			s32 ret = 0;
 			busy_count = 0;
-			WL_ERR(("Unusual continuous EBUSY error, %d %d %d %d %d %d %d %d %d\n",
+			AP6210_ERR("Unusual continuous EBUSY error, %d %d %d %d %d %d %d %d %d\n",
 				wl_get_drv_status(wl, SCANNING, ndev),
 				wl_get_drv_status(wl, SCAN_ABORTING, ndev),
 				wl_get_drv_status(wl, CONNECTING, ndev),
@@ -2212,15 +2214,15 @@ scan_out:
 				wl_get_drv_status(wl, AP_CREATING, ndev),
 				wl_get_drv_status(wl, AP_CREATED, ndev),
 				wl_get_drv_status(wl, SENDING_ACT_FRM, ndev),
-				wl_get_drv_status(wl, SENDING_ACT_FRM, ndev)));
+				wl_get_drv_status(wl, SENDING_ACT_FRM, ndev));
 
 			bzero(&bssid, sizeof(bssid));
 			if ((ret = wldev_ioctl(ndev, WLC_GET_BSSID,
 				&bssid, ETHER_ADDR_LEN, false)) == 0)
-				WL_ERR(("FW is connected with " MACDBG "/n",
-				MAC2STRDBG(bssid.octet)));
+				AP6210_ERR("FW is connected with " MACDBG "/n",
+				MAC2STRDBG(bssid.octet));
 			else
-				WL_ERR(("GET BSSID failed with %d\n", ret));
+				AP6210_ERR("GET BSSID failed with %d\n", ret);
 
 			wl_cfg80211_disconnect(wiphy, ndev, DOT11_RC_DISASSOC_LEAVING);
 		}
@@ -2243,15 +2245,15 @@ wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 	s32 err = 0;
 	struct wl_priv *wl = wiphy_priv(wiphy);
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	CHECK_SYS_UP(wl);
 
 	err = __wl_cfg80211_scan(wiphy, ndev, request, NULL);
 	if (unlikely(err)) {
 		if ((err == BCME_EPERM) && wl->scan_suppressed)
-			WL_DBG(("scan not permitted at this time (%d)\n", err));
+			AP6210_DEBUG("scan not permitted at this time (%d)\n", err);
 		else
-			WL_ERR(("scan error (%d)\n", err));
+			AP6210_ERR("scan error (%d)\n", err);
 		return err;
 	}
 
@@ -2264,7 +2266,7 @@ static s32 wl_set_rts(struct net_device *dev, u32 rts_threshold)
 
 	err = wldev_iovar_setint(dev, "rtsthresh", rts_threshold);
 	if (unlikely(err)) {
-		WL_ERR(("Error (%d)\n", err));
+		AP6210_ERR("Error (%d)\n", err);
 		return err;
 	}
 	return err;
@@ -2276,7 +2278,7 @@ static s32 wl_set_frag(struct net_device *dev, u32 frag_threshold)
 
 	err = wldev_iovar_setint_bsscfg(dev, "fragthresh", frag_threshold, 0);
 	if (unlikely(err)) {
-		WL_ERR(("Error (%d)\n", err));
+		AP6210_ERR("Error (%d)\n", err);
 		return err;
 	}
 	return err;
@@ -2290,7 +2292,7 @@ static s32 wl_set_retry(struct net_device *dev, u32 retry, bool l)
 	retry = htod32(retry);
 	err = wldev_ioctl(dev, cmd, &retry, sizeof(retry), true);
 	if (unlikely(err)) {
-		WL_ERR(("cmd (%d) , error (%d)\n", cmd, err));
+		AP6210_ERR("cmd (%d) , error (%d)\n", cmd, err);
 		return err;
 	}
 	return err;
@@ -2303,7 +2305,7 @@ static s32 wl_cfg80211_set_wiphy_params(struct wiphy *wiphy, u32 changed)
 	s32 err = 0;
 
 	CHECK_SYS_UP(wl);
-	WL_DBG(("Enter\n"));
+	AP6210_DEBUG("Enter\n");
 	if (changed & WIPHY_PARAM_RTS_THRESHOLD &&
 		(wl->conf->rts_threshold != wiphy->rts_threshold)) {
 		wl->conf->rts_threshold = wiphy->rts_threshold;
@@ -2350,10 +2352,10 @@ wl_cfg80211_join_ibss(struct wiphy *wiphy, struct net_device *dev,
 	s32 err = 0;
 	bool rollback_lock = false;
 
-	WL_TRACE(("In\n"));
+	AP6210_DEBUG("In\n");
 	CHECK_SYS_UP(wl);
 	if (params->bssid) {
-		WL_ERR(("Invalid bssid\n"));
+		AP6210_ERR("Invalid bssid\n");
 		return -EOPNOTSUPP;
 	}
 	bss = cfg80211_get_ibss(wiphy, NULL, params->ssid, params->ssid_len);
@@ -2384,7 +2386,7 @@ wl_cfg80211_join_ibss(struct wiphy *wiphy, struct net_device *dev,
 	}
 	if (bss) {
 		wl->ibss_starter = false;
-		WL_DBG(("Found IBSS\n"));
+		AP6210_DEBUG("Found IBSS\n");
 	} else {
 		wl->ibss_starter = true;
 	}
@@ -2408,7 +2410,7 @@ wl_cfg80211_join_ibss(struct wiphy *wiphy, struct net_device *dev,
 	err = wldev_ioctl(dev, WLC_SET_SSID, &join_params,
 		sizeof(join_params), true);
 	if (unlikely(err)) {
-		WL_ERR(("Error (%d)\n", err));
+		AP6210_ERR("Error (%d)\n", err);
 		return err;
 	}
 	return err;
@@ -2448,15 +2450,15 @@ wl_set_wpa_version(struct net_device *dev, struct cfg80211_connect_params *sme)
 
 #ifdef BCMWAPI_WPI
 	if (sme->crypto.wpa_versions & NL80211_WAPI_VERSION_1) {
-		WL_DBG((" * wl_set_wpa_version, set wpa_auth"
-			" to WPA_AUTH_WAPI 0x400"));
+		AP6210_DEBUG(" * wl_set_wpa_version, set wpa_auth"
+			" to WPA_AUTH_WAPI 0x400");
 		val = WAPI_AUTH_PSK; /* | WAPI_AUTH_UNSPECIFIED; */
 	}
 #endif
-	WL_DBG(("setting wpa_auth to 0x%0x\n", val));
+	AP6210_DEBUG("setting wpa_auth to 0x%0x\n", val);
 	err = wldev_iovar_setint_bsscfg(dev, "wpa_auth", val, bssidx);
 	if (unlikely(err)) {
-		WL_ERR(("set wpa_auth failed (%d)\n", err));
+		AP6210_ERR("set wpa_auth failed (%d)\n", err);
 		return err;
 	}
 	sec = wl_read_prof(wl, dev, WL_PROF_SEC);
@@ -2472,17 +2474,17 @@ wl_set_set_wapi_ie(struct net_device *dev, struct cfg80211_connect_params *sme)
 	s32 err = 0;
 	s32 bssidx = wl_cfgp2p_find_idx(wl, dev);
 
-	WL_DBG((" %s \n", __FUNCTION__));
+	AP6210_DEBUG(" %s \n", __FUNCTION__);
 
  	if (sme->crypto.wpa_versions & NL80211_WAPI_VERSION_1) {
 		err = wldev_iovar_setbuf_bsscfg(dev, "wapiie", sme->ie,
 			sme->ie_len, wl->ioctl_buf, WLC_IOCTL_MAXLEN, bssidx, &wl->ioctl_buf_sync);
 		if (unlikely(err)) {
-			WL_ERR(("===> set_wapi_ie Error (%d)\n", err));
+			AP6210_ERR("===> set_wapi_ie Error (%d)\n", err);
 			return err;
 		}
 	} else
-		WL_DBG((" * skip \n"));
+		AP6210_DEBUG(" * skip \n");
 	return err;
 }
 #endif /* BCMWAPI_WPI */
@@ -2498,25 +2500,25 @@ wl_set_auth_type(struct net_device *dev, struct cfg80211_connect_params *sme)
 	switch (sme->auth_type) {
 	case NL80211_AUTHTYPE_OPEN_SYSTEM:
 		val = WL_AUTH_OPEN_SYSTEM;
-		WL_DBG(("open system\n"));
+		AP6210_DEBUG("open system\n");
 		break;
 	case NL80211_AUTHTYPE_SHARED_KEY:
 		val = WL_AUTH_SHARED_KEY;
-		WL_DBG(("shared key\n"));
+		AP6210_DEBUG("shared key\n");
 		break;
 	case NL80211_AUTHTYPE_AUTOMATIC:
 		val = WL_AUTH_OPEN_SHARED;
-		WL_DBG(("automatic\n"));
+		AP6210_DEBUG("automatic\n");
 		break;
 	default:
 		val = WL_AUTH_OPEN_SHARED;
-		WL_ERR(("invalid auth type (%d)\n", sme->auth_type));
+		AP6210_ERR("invalid auth type (%d)\n", sme->auth_type);
 		break;
 	}
 
 	err = wldev_iovar_setint_bsscfg(dev, "auth", val, bssidx);
 	if (unlikely(err)) {
-		WL_ERR(("set auth failed (%d)\n", err));
+		AP6210_ERR("set auth failed (%d)\n", err);
 		return err;
 	}
 	sec = wl_read_prof(wl, dev, WL_PROF_SEC);
@@ -2559,8 +2561,8 @@ wl_set_set_cipher(struct net_device *dev, struct cfg80211_connect_params *sme)
 			break;
 #endif
 		default:
-			WL_ERR(("invalid cipher pairwise (%d)\n",
-				sme->crypto.ciphers_pairwise[0]));
+			AP6210_ERR("invalid cipher pairwise (%d)\n",
+				sme->crypto.ciphers_pairwise[0]);
 			return -EINVAL;
 		}
 	}
@@ -2586,20 +2588,20 @@ wl_set_set_cipher(struct net_device *dev, struct cfg80211_connect_params *sme)
 			break;
 #endif
 		default:
-			WL_ERR(("invalid cipher group (%d)\n",
-				sme->crypto.cipher_group));
+			AP6210_ERR("invalid cipher group (%d)\n",
+				sme->crypto.cipher_group);
 			return -EINVAL;
 		}
 	}
 
-	WL_DBG(("pval (%d) gval (%d)\n", pval, gval));
+	AP6210_DEBUG("pval (%d) gval (%d)\n", pval, gval);
 
 	if (is_wps_conn(sme)) {
 		if (sme->privacy)
 			err = wldev_iovar_setint_bsscfg(dev, "wsec", 4, bssidx);
 #ifdef BCMWAPI_WPI
 		else if (sme->crypto.cipher_group == WLAN_CIPHER_SUITE_SMS4) {
-				WL_DBG((" NO, is_wps_conn, WAPI set to SMS4_ENABLED"));
+				AP6210_DEBUG(" NO, is_wps_conn, WAPI set to SMS4_ENABLED");
 				err = wldev_iovar_setint_bsscfg(dev, "wsec", val, bssidx);
 			}
 #endif			
@@ -2607,12 +2609,12 @@ wl_set_set_cipher(struct net_device *dev, struct cfg80211_connect_params *sme)
 			/* WPS-2.0 allows no security */
 			err = wldev_iovar_setint_bsscfg(dev, "wsec", 0, bssidx);
 	} else {
-			WL_DBG((" NO, is_wps_conn, Set pval | gval to WSEC"));
+			AP6210_DEBUG(" NO, is_wps_conn, Set pval | gval to WSEC");
 			err = wldev_iovar_setint_bsscfg(dev, "wsec",
 				pval | gval, bssidx);
 	}
 	if (unlikely(err)) {
-		WL_ERR(("error (%d)\n", err));
+		AP6210_ERR("error (%d)\n", err);
 		return err;
 	}
 
@@ -2635,7 +2637,7 @@ wl_set_key_mgmt(struct net_device *dev, struct cfg80211_connect_params *sme)
 	if (sme->crypto.n_akm_suites) {
 		err = wldev_iovar_getint(dev, "wpa_auth", &val);
 		if (unlikely(err)) {
-			WL_ERR(("could not get wpa_auth (%d)\n", err));
+			AP6210_ERR("could not get wpa_auth (%d)\n", err);
 			return err;
 		}
 		if (val & (WPA_AUTH_PSK |
@@ -2648,8 +2650,8 @@ wl_set_key_mgmt(struct net_device *dev, struct cfg80211_connect_params *sme)
 				val = WPA_AUTH_PSK;
 				break;
 			default:
-				WL_ERR(("invalid cipher group (%d)\n",
-					sme->crypto.cipher_group));
+				AP6210_ERR("invalid cipher group (%d)\n",
+					sme->crypto.cipher_group);
 				return -EINVAL;
 			}
 		} else if (val & (WPA2_AUTH_PSK |
@@ -2662,8 +2664,8 @@ wl_set_key_mgmt(struct net_device *dev, struct cfg80211_connect_params *sme)
 				val = WPA2_AUTH_PSK;
 				break;
 			default:
-				WL_ERR(("invalid cipher group (%d)\n",
-					sme->crypto.cipher_group));
+				AP6210_ERR("invalid cipher group (%d)\n",
+					sme->crypto.cipher_group);
 				return -EINVAL;
 			}
 		}
@@ -2677,17 +2679,17 @@ wl_set_key_mgmt(struct net_device *dev, struct cfg80211_connect_params *sme)
 				val = WAPI_AUTH_PSK;
 				break;
 			default:
-				WL_ERR(("invalid cipher group (%d)\n",
-					sme->crypto.cipher_group));
+				AP6210_ERR("invalid cipher group (%d)\n",
+					sme->crypto.cipher_group);
 				return -EINVAL;
 			}
 		}
 #endif
-		WL_DBG(("setting wpa_auth to %d\n", val));
+		AP6210_DEBUG("setting wpa_auth to %d\n", val);
 
 		err = wldev_iovar_setint_bsscfg(dev, "wpa_auth", val, bssidx);
 		if (unlikely(err)) {
-			WL_ERR(("could not set wpa_auth (%d)\n", err));
+			AP6210_ERR("could not set wpa_auth (%d)\n", err);
 			return err;
 		}
 	}
@@ -2708,11 +2710,11 @@ wl_set_set_sharedkey(struct net_device *dev,
 	s32 err = 0;
 	s32 bssidx = wl_cfgp2p_find_idx(wl, dev);
 
-	WL_DBG(("key len (%d)\n", sme->key_len));
+	AP6210_DEBUG("key len (%d)\n", sme->key_len);
 	if (sme->key_len) {
 		sec = wl_read_prof(wl, dev, WL_PROF_SEC);
-		WL_DBG(("wpa_versions 0x%x cipher_pairwise 0x%x\n",
-			sec->wpa_versions, sec->cipher_pairwise));
+		AP6210_DEBUG("wpa_versions 0x%x cipher_pairwise 0x%x\n",
+			sec->wpa_versions, sec->cipher_pairwise);
 		if (!(sec->wpa_versions & (NL80211_WPA_VERSION_1 |
 			NL80211_WPA_VERSION_2
 #ifdef BCMWAPI_WPI
@@ -2730,7 +2732,7 @@ wl_set_set_sharedkey(struct net_device *dev,
 			key.len = (u32) sme->key_len;
 			key.index = (u32) sme->key_idx;
 			if (unlikely(key.len > sizeof(key.data))) {
-				WL_ERR(("Too long key length (%u)\n", key.len));
+				AP6210_ERR("Too long key length (%u)\n", key.len);
 				return -EINVAL;
 			}
 			memcpy(key.data, sme->key, key.len);
@@ -2748,27 +2750,27 @@ wl_set_set_sharedkey(struct net_device *dev,
 				break;
 #endif
 			default:
-				WL_ERR(("Invalid algorithm (%d)\n",
-					sme->crypto.ciphers_pairwise[0]));
+				AP6210_ERR("Invalid algorithm (%d)\n",
+					sme->crypto.ciphers_pairwise[0]);
 				return -EINVAL;
 			}
 			/* Set the new key/index */
-			WL_DBG(("key length (%d) key index (%d) algo (%d)\n",
-				key.len, key.index, key.algo));
-			WL_DBG(("key \"%s\"\n", key.data));
+			AP6210_DEBUG("key length (%d) key index (%d) algo (%d)\n",
+				key.len, key.index, key.algo);
+			AP6210_DEBUG("key \"%s\"\n", key.data);
 			swap_key_from_BE(&key);
 			err = wldev_iovar_setbuf_bsscfg(dev, "wsec_key", &key, sizeof(key),
 				wl->ioctl_buf, WLC_IOCTL_MAXLEN, bssidx, &wl->ioctl_buf_sync);
 			if (unlikely(err)) {
-				WL_ERR(("WLC_SET_KEY error (%d)\n", err));
+				AP6210_ERR("WLC_SET_KEY error (%d)\n", err);
 				return err;
 			}
 			if (sec->auth_type == NL80211_AUTHTYPE_SHARED_KEY) {
-				WL_DBG(("set auth_type to shared key\n"));
+				AP6210_DEBUG("set auth_type to shared key\n");
 				val = WL_AUTH_SHARED_KEY;	/* shared key */
 				err = wldev_iovar_setint_bsscfg(dev, "auth", val, bssidx);
 				if (unlikely(err)) {
-					WL_ERR(("set auth failed (%d)\n", err));
+					AP6210_ERR("set auth failed (%d)\n", err);
 					return err;
 				}
 			}
@@ -2801,10 +2803,10 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 	struct ether_addr bssid;
 	int ret;
 
-	WL_DBG(("In\n"));
+	AP6210_DEBUG("In\n");
 
 	if (unlikely(!sme->ssid)) {
-		WL_ERR(("Invalid ssid\n"));
+		AP6210_ERR("Invalid ssid\n");
 		return -EOPNOTSUPP;
 	}
 
@@ -2838,21 +2840,21 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 			memcpy(&scbval.ea, &bssid, ETHER_ADDR_LEN);
 			scbval.val = htod32(scbval.val);
 
-			WL_DBG(("drv status CONNECTED is not set, but connected in FW!" MACDBG "/n",
-				MAC2STRDBG(bssid.octet)));
+			AP6210_DEBUG("drv status CONNECTED is not set, but connected in FW!" MACDBG "\n",
+				MAC2STRDBG(bssid.octet));
 			err = wldev_ioctl(dev, WLC_DISASSOC, &scbval,
 				sizeof(scb_val_t), true);
 			if (unlikely(err)) {
 				wl_clr_drv_status(wl, DISCONNECTING, dev);
-				WL_ERR(("error (%d)\n", err));
+				AP6210_ERR("error (%d)\n", err);
 				return err;
 			}
 			while (wl_get_drv_status(wl, DISCONNECTING, dev)) {
-				WL_ERR(("Waiting for disconnection terminated.\n"));
+				AP6210_ERR("Waiting for disconnection terminated.\n");
 				msleep(20);
 			}
 		} else
-			WL_DBG(("Currently not associated!\n"));
+			AP6210_DEBUG("Currently not associated!\n");
 	}
 
 	/* Clean BSSID */
@@ -2868,12 +2870,12 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 		/* find the RSN_IE */
 		if ((wpa2_ie = bcm_parse_tlvs((u8 *)sme->ie, sme->ie_len,
 			DOT11_MNG_RSN_ID)) != NULL) {
-			WL_DBG((" WPA2 IE is found\n"));
+			AP6210_DEBUG(" WPA2 IE is found\n");
 		}
 		/* find the WPA_IE */
 		if ((wpa_ie = wl_cfgp2p_find_wpaie((u8 *)sme->ie,
 			sme->ie_len)) != NULL) {
-			WL_DBG((" WPA IE is found\n"));
+			AP6210_DEBUG(" WPA IE is found\n");
 		}
 		if (wpa_ie != NULL || wpa2_ie != NULL) {
 			wpaie = (wpa_ie != NULL) ? (u8 *)wpa_ie : (u8 *)wpa2_ie;
@@ -2896,37 +2898,37 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 	if (chan) {
 		wl->channel = ieee80211_frequency_to_channel(chan->center_freq);
 		chan_cnt = 1;
-		WL_DBG(("channel (%d), center_req (%d), %d channels\n", wl->channel,
-			chan->center_freq, chan_cnt));
+		AP6210_DEBUG("channel (%d), center_req (%d), %d channels\n", wl->channel,
+			chan->center_freq, chan_cnt);
 	} else
 		wl->channel = 0;
 
 #ifdef BCMWAPI_WPI
-	WL_DBG(("1. enable wapi auth\n"));
+	AP6210_DEBUG("1. enable wapi auth\n");
 	if (sme->crypto.wpa_versions & NL80211_WAPI_VERSION_1) {
-		WL_DBG(("2. set wapi ie  \n"));
+		AP6210_DEBUG("2. set wapi ie  \n");
 		err = wl_set_set_wapi_ie(dev, sme);
 		if (unlikely(err))
 			return err;
 	} else
-		WL_DBG(("2. Not wapi ie  \n"));
+		AP6210_DEBUG("2. Not wapi ie  \n");
 #endif
-	WL_DBG(("ie (%p), ie_len (%zd)\n", sme->ie, sme->ie_len));
-	WL_DBG(("3. set wapi version \n"));
+	AP6210_DEBUG("ie (%p), ie_len (%zd)\n", sme->ie, sme->ie_len);
+	AP6210_DEBUG("3. set wapi version \n");
 	err = wl_set_wpa_version(dev, sme);
 	if (unlikely(err)) {
-		WL_ERR(("Invalid wpa_version\n"));
+		AP6210_ERR("Invalid wpa_version\n");
 		return err;
 	}
 #ifdef BCMWAPI_WPI
 	if (sme->crypto.wpa_versions & NL80211_WAPI_VERSION_1)
-		WL_DBG(("4. WAPI Dont Set wl_set_auth_type\n"));
+		AP6210_DEBUG("4. WAPI Dont Set wl_set_auth_type\n");
 	else {
-		WL_DBG(("4. wl_set_auth_type\n"));
+		AP6210_DEBUG("4. wl_set_auth_type\n");
 #endif
 		err = wl_set_auth_type(dev, sme);
 		if (unlikely(err)) {
-			WL_ERR(("Invalid auth type\n"));
+			AP6210_ERR("Invalid auth type\n");
 			return err;
 		}
 #ifdef BCMWAPI_WPI
@@ -2936,19 +2938,19 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 
 	err = wl_set_set_cipher(dev, sme);
 	if (unlikely(err)) {
-		WL_ERR(("Invalid ciper\n"));
+		AP6210_ERR("Invalid ciper\n");
 		return err;
 	}
 
 	err = wl_set_key_mgmt(dev, sme);
 	if (unlikely(err)) {
-		WL_ERR(("Invalid key mgmt\n"));
+		AP6210_ERR("Invalid key mgmt\n");
 		return err;
 	}
 
 	err = wl_set_set_sharedkey(dev, sme);
 	if (unlikely(err)) {
-		WL_ERR(("Invalid shared key\n"));
+		AP6210_ERR("Invalid shared key\n");
 		return err;
 	}
 
@@ -3000,8 +3002,8 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 	}
 	ext_join_params->assoc.chanspec_num = htod32(ext_join_params->assoc.chanspec_num);
 	if (ext_join_params->ssid.SSID_len < IEEE80211_MAX_SSID_LEN) {
-		WL_INFO(("ssid \"%s\", len (%d)\n", ext_join_params->ssid.SSID,
-			ext_join_params->ssid.SSID_len));
+		AP6210_DEBUG("ssid \"%s\", len (%d)\n", ext_join_params->ssid.SSID,
+			ext_join_params->ssid.SSID_len);
 	}
 	wl_set_drv_status(wl, CONNECTING, dev);
 	err = wldev_iovar_setbuf_bsscfg(dev, "join", ext_join_params, join_params_size,
@@ -3010,10 +3012,10 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 	if (err) {
 		wl_clr_drv_status(wl, CONNECTING, dev);
 		if (err == BCME_UNSUPPORTED) {
-			WL_DBG(("join iovar is not supported\n"));
+			AP6210_DEBUG("join iovar is not supported\n");
 			goto set_ssid;
 		} else
-			WL_ERR(("error (%d)\n", err));
+			AP6210_ERR("error (%d)\n", err);
 	} else
 		goto exit;
 
@@ -3031,16 +3033,16 @@ set_ssid:
 		memcpy(&join_params.params.bssid, &ether_bcast, ETH_ALEN);
 
 	wl_ch_to_chanspec(wl->channel, &join_params, &join_params_size);
-	WL_DBG(("join_param_size %d\n", join_params_size));
+	AP6210_DEBUG("join_param_size %d\n", join_params_size);
 
 	if (join_params.ssid.SSID_len < IEEE80211_MAX_SSID_LEN) {
-		WL_INFO(("ssid \"%s\", len (%d)\n", join_params.ssid.SSID,
-			join_params.ssid.SSID_len));
+		AP6210_DEBUG("ssid \"%s\", len (%d)\n", join_params.ssid.SSID,
+			join_params.ssid.SSID_len);
 	}
 	wl_set_drv_status(wl, CONNECTING, dev);
 	err = wldev_ioctl(dev, WLC_SET_SSID, &join_params, join_params_size, true);
 	if (err) {
-		WL_ERR(("error (%d)\n", err));
+		AP6210_ERR("error (%d)\n", err);
 		wl_clr_drv_status(wl, CONNECTING, dev);
 	}
 exit:
@@ -3056,7 +3058,7 @@ wl_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
 	bool act = false;
 	s32 err = 0;
 	u8 *curbssid;
-	WL_ERR(("Reason %d\n", reason_code));
+	AP6210_ERR("Reason %d\n", reason_code);
 	CHECK_SYS_UP(wl);
 	act = *(bool *) wl_read_prof(wl, dev, WL_PROF_ACT);
 	curbssid = wl_read_prof(wl, dev, WL_PROF_BSSID);
@@ -3078,7 +3080,7 @@ wl_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
 			sizeof(scb_val_t), true);
 		if (unlikely(err)) {
 			wl_clr_drv_status(wl, DISCONNECTING, dev);
-			WL_ERR(("error (%d)\n", err));
+			AP6210_ERR("error (%d)\n", err);
 			return err;
 		}
 	}
@@ -3103,13 +3105,13 @@ wl_cfg80211_set_tx_power(struct wiphy *wiphy,
 		break;
 	case NL80211_TX_POWER_LIMITED:
 		if (dbm < 0) {
-			WL_ERR(("TX_POWER_LIMITTED - dbm is negative\n"));
+			AP6210_ERR("TX_POWER_LIMITTED - dbm is negative\n");
 			return -EINVAL;
 		}
 		break;
 	case NL80211_TX_POWER_FIXED:
 		if (dbm < 0) {
-			WL_ERR(("TX_POWER_FIXED - dbm is negative..\n"));
+			AP6210_ERR("TX_POWER_FIXED - dbm is negative..\n");
 			return -EINVAL;
 		}
 		break;
@@ -3119,7 +3121,7 @@ wl_cfg80211_set_tx_power(struct wiphy *wiphy,
 	disable = htod32(disable);
 	err = wldev_ioctl(ndev, WLC_SET_RADIO, &disable, sizeof(disable), true);
 	if (unlikely(err)) {
-		WL_ERR(("WLC_SET_RADIO error (%d)\n", err));
+		AP6210_ERR("WLC_SET_RADIO error (%d)\n", err);
 		return err;
 	}
 
@@ -3130,7 +3132,7 @@ wl_cfg80211_set_tx_power(struct wiphy *wiphy,
 	err = wldev_iovar_setint(ndev, "qtxpower",
 		(s32) (bcm_mw_to_qdbm(txpwrmw)));
 	if (unlikely(err)) {
-		WL_ERR(("qtxpower error (%d)\n", err));
+		AP6210_ERR("qtxpower error (%d)\n", err);
 		return err;
 	}
 	wl->conf->tx_power = dbm;
@@ -3149,7 +3151,7 @@ static s32 wl_cfg80211_get_tx_power(struct wiphy *wiphy, s32 *dbm)
 	CHECK_SYS_UP(wl);
 	err = wldev_iovar_getint(ndev, "qtxpower", &txpwrdbm);
 	if (unlikely(err)) {
-		WL_ERR(("error (%d)\n", err));
+		AP6210_ERR("error (%d)\n", err);
 		return err;
 	}
 	result = (u8) (txpwrdbm & ~WL_TXPWR_OVERRIDE);
@@ -3168,11 +3170,11 @@ wl_cfg80211_config_default_key(struct wiphy *wiphy, struct net_device *dev,
 	s32 err = 0;
 	s32 bssidx = wl_cfgp2p_find_idx(wl, dev);
 
-	WL_DBG(("key index (%d)\n", key_idx));
+	AP6210_DEBUG("key index (%d)\n", key_idx);
 	CHECK_SYS_UP(wl);
 	err = wldev_iovar_getint_bsscfg(dev, "wsec", &wsec, bssidx);
 	if (unlikely(err)) {
-		WL_ERR(("WLC_GET_WSEC error (%d)\n", err));
+		AP6210_ERR("WLC_GET_WSEC error (%d)\n", err);
 		return err;
 	}
 	if (wsec & WEP_ENABLED) {
@@ -3182,7 +3184,7 @@ wl_cfg80211_config_default_key(struct wiphy *wiphy, struct net_device *dev,
 		err = wldev_ioctl(dev, WLC_SET_KEY_PRIMARY, &index,
 			sizeof(index), true);
 		if (unlikely(err)) {
-			WL_ERR(("error (%d)\n", err));
+			AP6210_ERR("error (%d)\n", err);
 		}
 	}
 	return err;
@@ -3211,15 +3213,15 @@ wl_add_keyext(struct wiphy *wiphy, struct net_device *dev,
 		err = wldev_iovar_setbuf_bsscfg(dev, "wsec_key", &key, sizeof(key),
 			wl->ioctl_buf, WLC_IOCTL_MAXLEN, bssidx, &wl->ioctl_buf_sync);
 		if (unlikely(err)) {
-			WL_ERR(("key delete error (%d)\n", err));
+			AP6210_ERR("key delete error (%d)\n", err);
 			return err;
 		}
 	} else {
 		if (key.len > sizeof(key.data)) {
-			WL_ERR(("Invalid key length (%d)\n", key.len));
+			AP6210_ERR("Invalid key length (%d)\n", key.len);
 			return -EINVAL;
 		}
-		WL_DBG(("Setting the key index %d\n", key.index));
+		AP6210_DEBUG("Setting the key index %d\n", key.index);
 		memcpy(key.data, params->key, key.len);
 
 		if ((mode == WL_MODE_BSS) &&
@@ -3244,32 +3246,32 @@ wl_add_keyext(struct wiphy *wiphy, struct net_device *dev,
 		switch (params->cipher) {
 		case WLAN_CIPHER_SUITE_WEP40:
 			key.algo = CRYPTO_ALGO_WEP1;
-			WL_DBG(("WLAN_CIPHER_SUITE_WEP40\n"));
+			AP6210_DEBUG("WLAN_CIPHER_SUITE_WEP40\n");
 			break;
 		case WLAN_CIPHER_SUITE_WEP104:
 			key.algo = CRYPTO_ALGO_WEP128;
-			WL_DBG(("WLAN_CIPHER_SUITE_WEP104\n"));
+			AP6210_DEBUG("WLAN_CIPHER_SUITE_WEP104\n");
 			break;
 		case WLAN_CIPHER_SUITE_TKIP:
 			key.algo = CRYPTO_ALGO_TKIP;
-			WL_DBG(("WLAN_CIPHER_SUITE_TKIP\n"));
+			AP6210_DEBUG("WLAN_CIPHER_SUITE_TKIP\n");
 			break;
 		case WLAN_CIPHER_SUITE_AES_CMAC:
 			key.algo = CRYPTO_ALGO_AES_CCM;
-			WL_DBG(("WLAN_CIPHER_SUITE_AES_CMAC\n"));
+			AP6210_DEBUG("WLAN_CIPHER_SUITE_AES_CMAC\n");
 			break;
 		case WLAN_CIPHER_SUITE_CCMP:
 			key.algo = CRYPTO_ALGO_AES_CCM;
-			WL_DBG(("WLAN_CIPHER_SUITE_CCMP\n"));
+			AP6210_DEBUG("WLAN_CIPHER_SUITE_CCMP\n");
 			break;
 #ifdef BCMWAPI_WPI
 		case WLAN_CIPHER_SUITE_SMS4:
 			key.algo = CRYPTO_ALGO_SMS4;
-			WL_DBG(("WLAN_CIPHER_SUITE_SMS4\n"));
+			AP6210_DEBUG("WLAN_CIPHER_SUITE_SMS4\n");
 			break;
 #endif
 		default:
-			WL_ERR(("Invalid cipher (0x%x)\n", params->cipher));
+			AP6210_ERR("Invalid cipher (0x%x)\n", params->cipher);
 			return -EINVAL;
 		}
 		swap_key_from_BE(&key);
@@ -3278,7 +3280,7 @@ wl_add_keyext(struct wiphy *wiphy, struct net_device *dev,
 		err = wldev_iovar_setbuf_bsscfg(dev, "wsec_key", &key, sizeof(key),
 			wl->ioctl_buf, WLC_IOCTL_MAXLEN, bssidx, &wl->ioctl_buf_sync);
 		if (unlikely(err)) {
-			WL_ERR(("WLC_SET_KEY error (%d)\n", err));
+			AP6210_ERR("WLC_SET_KEY error (%d)\n", err);
 			return err;
 		}
 	}
@@ -3298,7 +3300,7 @@ wl_cfg80211_add_key(struct wiphy *wiphy, struct net_device *dev,
 	s32 bssidx = 0;
 	struct wl_priv *wl = wiphy_priv(wiphy);
 	s32 mode = wl_get_mode_by_netdev(wl, dev);
-	WL_DBG(("key index (%d)\n", key_idx));
+	AP6210_DEBUG("key index (%d)\n", key_idx);
 	CHECK_SYS_UP(wl);
 
 	bssidx = wl_cfgp2p_find_idx(wl, dev);
@@ -3313,7 +3315,7 @@ wl_cfg80211_add_key(struct wiphy *wiphy, struct net_device *dev,
 	key.index = (u32) key_idx;
 
 	if (unlikely(key.len > sizeof(key.data))) {
-		WL_ERR(("Too long key length (%u)\n", key.len));
+		AP6210_ERR("Too long key length (%u)\n", key.len);
 		return -EINVAL;
 	}
 	memcpy(key.data, params->key, key.len);
@@ -3323,12 +3325,12 @@ wl_cfg80211_add_key(struct wiphy *wiphy, struct net_device *dev,
 	case WLAN_CIPHER_SUITE_WEP40:
 		key.algo = CRYPTO_ALGO_WEP1;
 		val = WEP_ENABLED;
-		WL_DBG(("WLAN_CIPHER_SUITE_WEP40\n"));
+		AP6210_DEBUG("WLAN_CIPHER_SUITE_WEP40\n");
 		break;
 	case WLAN_CIPHER_SUITE_WEP104:
 		key.algo = CRYPTO_ALGO_WEP128;
 		val = WEP_ENABLED;
-		WL_DBG(("WLAN_CIPHER_SUITE_WEP104\n"));
+		AP6210_DEBUG("WLAN_CIPHER_SUITE_WEP104\n");
 		break;
 	case WLAN_CIPHER_SUITE_TKIP:
 		key.algo = CRYPTO_ALGO_TKIP;
@@ -3339,28 +3341,28 @@ wl_cfg80211_add_key(struct wiphy *wiphy, struct net_device *dev,
 			bcopy(&key.data[16], &key.data[24], sizeof(keybuf));
 			bcopy(keybuf, &key.data[16], sizeof(keybuf));
 		}
-		WL_DBG(("WLAN_CIPHER_SUITE_TKIP\n"));
+		AP6210_DEBUG("WLAN_CIPHER_SUITE_TKIP\n");
 		break;
 	case WLAN_CIPHER_SUITE_AES_CMAC:
 		key.algo = CRYPTO_ALGO_AES_CCM;
 		val = AES_ENABLED;
-		WL_DBG(("WLAN_CIPHER_SUITE_AES_CMAC\n"));
+		AP6210_DEBUG("WLAN_CIPHER_SUITE_AES_CMAC\n");
 		break;
 	case WLAN_CIPHER_SUITE_CCMP:
 		key.algo = CRYPTO_ALGO_AES_CCM;
 		val = AES_ENABLED;
-		WL_DBG(("WLAN_CIPHER_SUITE_CCMP\n"));
+		AP6210_DEBUG("WLAN_CIPHER_SUITE_CCMP\n");
 		break;
 #ifdef BCMWAPI_WPI
 	case WLAN_CIPHER_SUITE_SMS4:
 		key.algo = CRYPTO_ALGO_SMS4;
 		val = SMS4_ENABLED;
-		WL_DBG((" * wl_cfg80211_add_key, set key "
-			" to WLAN_CIPHER_SUITE_SMS4\n"));
+		AP6210_DEBUG(" * wl_cfg80211_add_key, set key "
+			" to WLAN_CIPHER_SUITE_SMS4\n");
 		break;
 #endif /* BCMWAPI_WPI */
 	default:
-		WL_ERR(("Invalid cipher (0x%x)\n", params->cipher));
+		AP6210_ERR("Invalid cipher (0x%x)\n", params->cipher);
 		return -EINVAL;
 	}
 
@@ -3369,21 +3371,21 @@ wl_cfg80211_add_key(struct wiphy *wiphy, struct net_device *dev,
 	err = wldev_iovar_setbuf_bsscfg(dev, "wsec_key", &key, sizeof(key), wl->ioctl_buf,
 		WLC_IOCTL_MAXLEN, bssidx, &wl->ioctl_buf_sync);
 	if (unlikely(err)) {
-		WL_ERR(("WLC_SET_KEY error (%d)\n", err));
+		AP6210_ERR("WLC_SET_KEY error (%d)\n", err);
 		return err;
 	}
 
 exit:
 	err = wldev_iovar_getint_bsscfg(dev, "wsec", &wsec, bssidx);
 	if (unlikely(err)) {
-		WL_ERR(("get wsec error (%d)\n", err));
+		AP6210_ERR("get wsec error (%d)\n", err);
 		return err;
 	}
 
 	wsec |= val;
 	err = wldev_iovar_setint_bsscfg(dev, "wsec", wsec, bssidx);
 	if (unlikely(err)) {
-		WL_ERR(("set wsec error (%d)\n", err));
+		AP6210_ERR("set wsec error (%d)\n", err);
 		return err;
 	}
 
@@ -3399,7 +3401,7 @@ wl_cfg80211_del_key(struct wiphy *wiphy, struct net_device *dev,
 	s32 err = 0;
 	s32 bssidx = wl_cfgp2p_find_idx(wl, dev);
 
-	WL_DBG(("Enter\n"));
+	AP6210_DEBUG("Enter\n");
 #ifndef IEEE80211W
 	if ((key_idx >= DOT11_MAX_DEFAULT_KEYS) && (key_idx < DOT11_MAX_DEFAULT_KEYS+2))
 		return -EINVAL;
@@ -3411,7 +3413,7 @@ wl_cfg80211_del_key(struct wiphy *wiphy, struct net_device *dev,
 	key.algo = CRYPTO_ALGO_OFF;
 	key.index = (u32) key_idx;
 
-	WL_DBG(("key index (%d)\n", key_idx));
+	AP6210_DEBUG("key index (%d)\n", key_idx);
 	/* Set the new key/index */
 	swap_key_from_BE(&key);
 	err = wldev_iovar_setbuf_bsscfg(dev, "wsec_key", &key, sizeof(key), wl->ioctl_buf,
@@ -3420,10 +3422,10 @@ wl_cfg80211_del_key(struct wiphy *wiphy, struct net_device *dev,
 		if (err == -EINVAL) {
 			if (key.index >= DOT11_MAX_DEFAULT_KEYS) {
 				/* we ignore this key index in this case */
-				WL_DBG(("invalid key index (%d)\n", key_idx));
+				AP6210_DEBUG("invalid key index (%d)\n", key_idx);
 			}
 		} else {
-			WL_ERR(("WLC_SET_KEY error (%d)\n", err));
+			AP6210_ERR("WLC_SET_KEY error (%d)\n", err);
 		}
 		return err;
 	}
@@ -3443,7 +3445,7 @@ wl_cfg80211_get_key(struct wiphy *wiphy, struct net_device *dev,
 	s32 err = 0;
 	s32 bssidx = wl_cfgp2p_find_idx(wl, dev);
 
-	WL_DBG(("key index (%d)\n", key_idx));
+	AP6210_DEBUG("key index (%d)\n", key_idx);
 	CHECK_SYS_UP(wl);
 	memset(&key, 0, sizeof(key));
 	key.index = key_idx;
@@ -3454,7 +3456,7 @@ wl_cfg80211_get_key(struct wiphy *wiphy, struct net_device *dev,
 
 	wldev_iovar_getint_bsscfg(dev, "wsec", &wsec, bssidx);
 	if (unlikely(err)) {
-		WL_ERR(("WLC_GET_WSEC error (%d)\n", err));
+		AP6210_ERR("WLC_GET_WSEC error (%d)\n", err);
 		return err;
 	}
 	switch (wsec & ~SES_OW_ENABLED) {
@@ -3462,29 +3464,29 @@ wl_cfg80211_get_key(struct wiphy *wiphy, struct net_device *dev,
 			sec = wl_read_prof(wl, dev, WL_PROF_SEC);
 			if (sec->cipher_pairwise & WLAN_CIPHER_SUITE_WEP40) {
 				params.cipher = WLAN_CIPHER_SUITE_WEP40;
-				WL_DBG(("WLAN_CIPHER_SUITE_WEP40\n"));
+				AP6210_DEBUG("WLAN_CIPHER_SUITE_WEP40\n");
 			} else if (sec->cipher_pairwise & WLAN_CIPHER_SUITE_WEP104) {
 				params.cipher = WLAN_CIPHER_SUITE_WEP104;
-				WL_DBG(("WLAN_CIPHER_SUITE_WEP104\n"));
+				AP6210_DEBUG("WLAN_CIPHER_SUITE_WEP104\n");
 			}
 			break;
 		case TKIP_ENABLED:
 			params.cipher = WLAN_CIPHER_SUITE_TKIP;
-			WL_DBG(("WLAN_CIPHER_SUITE_TKIP\n"));
+			AP6210_DEBUG("WLAN_CIPHER_SUITE_TKIP\n");
 			break;
 		case AES_ENABLED:
 			params.cipher = WLAN_CIPHER_SUITE_AES_CMAC;
-			WL_DBG(("WLAN_CIPHER_SUITE_AES_CMAC\n"));
+			AP6210_DEBUG("WLAN_CIPHER_SUITE_AES_CMAC\n");
 			break;
 #ifdef BCMWAPI_WPI
 		case WLAN_CIPHER_SUITE_SMS4:
 			key.algo = CRYPTO_ALGO_SMS4;
-			WL_DBG((" * wl_cfg80211_add_key, set key"
-				"to WLAN_CIPHER_SUITE_SMS4\n"));
+			AP6210_DEBUG(" * wl_cfg80211_add_key, set key"
+				"to WLAN_CIPHER_SUITE_SMS4\n");
 			break;
 #endif
 		default:
-			WL_ERR(("Invalid algo (0x%x)\n", wsec));
+			AP6210_ERR("Invalid algo (0x%x)\n", wsec);
 			return -EINVAL;
 	}
 
@@ -3496,7 +3498,7 @@ static s32
 wl_cfg80211_config_default_mgmt_key(struct wiphy *wiphy,
 	struct net_device *dev, u8 key_idx)
 {
-	WL_INFO(("Not supported\n"));
+	AP6210_DEBUG("Not supported\n");
 	return -EOPNOTSUPP;
 }
 
@@ -3519,7 +3521,7 @@ wl_cfg80211_get_station(struct wiphy *wiphy, struct net_device *dev,
 		err = wldev_iovar_getbuf(dev, "sta_info", (struct ether_addr *)mac,
 			ETHER_ADDR_LEN, wl->ioctl_buf, WLC_IOCTL_SMLEN, &wl->ioctl_buf_sync);
 		if (err < 0) {
-			WL_ERR(("GET STA INFO failed, %d\n", err));
+			AP6210_ERR("GET STA INFO failed, %d\n", err);
 			return err;
 		}
 		sinfo->filled = STATION_INFO_INACTIVE_TIME;
@@ -3535,35 +3537,35 @@ wl_cfg80211_get_station(struct wiphy *wiphy, struct net_device *dev,
 			sinfo->filled |= STATION_INFO_CONNECTED_TIME;
 			sinfo->connected_time = sta->in;
 		}
-		WL_INFO(("STA %s : idle time : %d sec, connected time :%d ms\n",
+		AP6210_DEBUG("STA %s : idle time : %d sec, connected time :%d ms\n",
 			bcm_ether_ntoa((const struct ether_addr *)mac, eabuf), sinfo->inactive_time,
-			sta->idle * 1000));
+			sta->idle * 1000);
 #endif
 	} else if (wl_get_mode_by_netdev(wl, dev) == WL_MODE_BSS) {
 		get_pktcnt_t pktcnt;
 		u8 *curmacp = wl_read_prof(wl, dev, WL_PROF_BSSID);
 		if (!wl_get_drv_status(wl, CONNECTED, dev) ||
 			(dhd_is_associated(dhd, NULL, &err) == FALSE)) {
-			WL_ERR(("NOT assoc\n"));
+			AP6210_ERR("NOT assoc\n");
 			if (err == -ERESTARTSYS)
 				return err;
 			err = -ENODEV;
 			return err;
 		}
 		if (memcmp(mac, curmacp, ETHER_ADDR_LEN)) {
-			WL_ERR(("Wrong Mac address: "MACDBG" != "MACDBG"\n",
-				MAC2STRDBG(mac), MAC2STRDBG(curmacp)));
+			AP6210_ERR("Wrong Mac address: "MACDBG" != "MACDBG"\n",
+				MAC2STRDBG(mac), MAC2STRDBG(curmacp));
 		}
 
 		/* Report the current tx rate */
 		err = wldev_ioctl(dev, WLC_GET_RATE, &rate, sizeof(rate), false);
 		if (err) {
-			WL_ERR(("Could not get rate (%d)\n", err));
+			AP6210_ERR("Could not get rate (%d)\n", err);
 		} else {
 			rate = dtoh32(rate);
 			sinfo->filled |= STATION_INFO_TX_BITRATE;
 			sinfo->txrate.legacy = rate * 5;
-			WL_DBG(("Rate %d Mbps\n", (rate / 2)));
+			AP6210_DEBUG("Rate %d Mbps\n", (rate / 2));
 		}
 
 		memset(&scb_val, 0, sizeof(scb_val));
@@ -3571,7 +3573,7 @@ wl_cfg80211_get_station(struct wiphy *wiphy, struct net_device *dev,
 		err = wldev_ioctl(dev, WLC_GET_RSSI, &scb_val,
 			sizeof(scb_val_t), false);
 		if (err) {
-			WL_ERR(("Could not get rssi (%d)\n", err));
+			AP6210_ERR("Could not get rssi (%d)\n", err);
 			goto get_station_err;
 		}
 		rssi = dtoh32(scb_val.val);
@@ -3580,7 +3582,7 @@ wl_cfg80211_get_station(struct wiphy *wiphy, struct net_device *dev,
 #endif
 		sinfo->filled |= STATION_INFO_SIGNAL;
 		sinfo->signal = rssi;
-		WL_DBG(("RSSI %d dBm\n", rssi));
+		AP6210_DEBUG("RSSI %d dBm\n", rssi);
 		err = wldev_ioctl(dev, WLC_GET_PKTCNTS, &pktcnt,
 			sizeof(pktcnt), false);
 		if (!err) {
@@ -3596,7 +3598,7 @@ wl_cfg80211_get_station(struct wiphy *wiphy, struct net_device *dev,
 get_station_err:
 		if (err && (err != -ERESTARTSYS)) {
 			/* Disconnect due to zero BSSID or error to get RSSI */
-			WL_ERR(("force cfg80211_disconnected\n"));
+			AP6210_ERR("force cfg80211_disconnected\n");
 			wl_clr_drv_status(wl, CONNECTED, dev);
 			cfg80211_disconnected(dev, 0, NULL, 0, GFP_KERNEL);
 			wl_link_down(wl);
@@ -3614,10 +3616,10 @@ int wl_cfg80211_update_power_mode(struct net_device *dev)
 
 	err = wldev_ioctl(dev, WLC_GET_PM, &pm, sizeof(pm), false);
 	if (err || (pm == -1)) {
-		WL_ERR(("error (%d)\n", err));
+		AP6210_ERR("error (%d)\n", err);
 	} else {
 		pm = (pm == PM_OFF) ? false : true;
-		WL_DBG(("%s: %d\n", __func__, pm));
+		AP6210_DEBUG("%s: %d\n", __func__, pm);
 		if (dev->ieee80211_ptr)
 			dev->ieee80211_ptr->ps = pm;
 	}
@@ -3640,7 +3642,7 @@ wl_cfg80211_set_power_mgmt(struct wiphy *wiphy, struct net_device *dev,
 	if (wl->p2p_net == dev || _net_info == NULL) {
 		return err;
 	}
-	WL_DBG(("%s: Enter power save enabled %d\n", dev->name, enabled));
+	AP6210_DEBUG("%s: Enter power save enabled %d\n", dev->name, enabled);
 
 #if !defined(SUPPORT_PM2_ONLY)
 	/* android has special hooks to change pm when kernel suspended */
@@ -3651,18 +3653,18 @@ wl_cfg80211_set_power_mgmt(struct wiphy *wiphy, struct net_device *dev,
 
 	if (_net_info->pm_block || wl->vsdb_mode) {
 		/* Do not enable the power save if it is p2p interface or vsdb mode is set */
-		WL_DBG(("%s:Do not enable the power save for pm_block %d or vsdb_mode %d\n",
-			dev->name, _net_info->pm_block, wl->vsdb_mode));
+		AP6210_DEBUG("%s:Do not enable the power save for pm_block %d or vsdb_mode %d\n",
+			dev->name, _net_info->pm_block, wl->vsdb_mode);
 		pm = PM_OFF;
 	}
 	pm = htod32(pm);
-	WL_DBG(("%s:power save %s\n", dev->name, (pm ? "enabled" : "disabled")));
+	AP6210_DEBUG("%s:power save %s\n", dev->name, (pm ? "enabled" : "disabled"));
 	err = wldev_ioctl(dev, WLC_SET_PM, &pm, sizeof(pm), true);
 	if (unlikely(err)) {
 		if (err == -ENODEV)
-			WL_DBG(("net_device is not ready yet\n"));
+			AP6210_DEBUG("net_device is not ready yet\n");
 		else
-			WL_ERR(("error (%d)\n", err));
+			AP6210_ERR("error (%d)\n", err);
 		return err;
 	}
 	return err;
@@ -3702,7 +3704,7 @@ static s32 wl_cfg80211_resume(struct wiphy *wiphy)
 	s32 err = 0;
 
 	if (unlikely(!wl_get_drv_status(wl, READY, ndev))) {
-		WL_INFO(("device is not ready\n"));
+		AP6210_DEBUG("device is not ready\n");
 		return 0;
 	}
 
@@ -3724,8 +3726,8 @@ wl_cfg80211_suspend(struct wiphy *wiphy)
 	struct net_device *ndev = wl_to_prmry_ndev(wl);
 	unsigned long flags;
 	if (unlikely(!wl_get_drv_status(wl, READY, ndev))) {
-		WL_INFO(("device is not ready : status (%d)\n",
-			(int)wl->status));
+		AP6210_DEBUG("device is not ready : status (%d)\n",
+			(int)wl->status);
 		return 0;
 	}
 	for_each_ndev(wl, iter, next)
@@ -3759,24 +3761,24 @@ wl_update_pmklist(struct net_device *dev, struct wl_pmk_list *pmk_list,
 	struct net_device *primary_dev = wl_to_prmry_ndev(wl);
 
 	if (!pmk_list) {
-		printk("pmk_list is NULL\n");
+		AP6210_DEBUG("pmk_list is NULL\n");
 		return -EINVAL;
 	}
 	/* pmk list is supported only for STA interface i.e. primary interface
 	 * Refer code wlc_bsscfg.c->wlc_bsscfg_sta_init
 	 */
 	if (primary_dev != dev) {
-		WL_INFO(("Not supporting Flushing pmklist on virtual"
-			" interfaces than primary interface\n"));
+		AP6210_DEBUG("Not supporting Flushing pmklist on virtual"
+			" interfaces than primary interface\n");
 		return err;
 	}
 
-	WL_DBG(("No of elements %d\n", pmk_list->pmkids.npmkid));
+	AP6210_DEBUG("No of elements %d\n", pmk_list->pmkids.npmkid);
 	for (i = 0; i < pmk_list->pmkids.npmkid; i++) {
-		WL_DBG(("PMKID[%d]: %pM =\n", i,
-			&pmk_list->pmkids.pmkid[i].BSSID));
+		AP6210_DEBUG("PMKID[%d]: %pM =\n", i,
+			&pmk_list->pmkids.pmkid[i].BSSID);
 		for (j = 0; j < WPA2_PMKID_LEN; j++) {
-			WL_DBG(("%02x\n", pmk_list->pmkids.pmkid[i].PMKID[j]));
+			AP6210_DEBUG("%02x\n", pmk_list->pmkids.pmkid[i].PMKID[j]);
 		}
 	}
 	if (likely(!err)) {
@@ -3810,12 +3812,12 @@ wl_cfg80211_set_pmksa(struct wiphy *wiphy, struct net_device *dev,
 	} else {
 		err = -EINVAL;
 	}
-	WL_DBG(("set_pmksa,IW_PMKSA_ADD - PMKID: %pM =\n",
-		&wl->pmk_list->pmkids.pmkid[wl->pmk_list->pmkids.npmkid - 1].BSSID));
+	AP6210_DEBUG("set_pmksa,IW_PMKSA_ADD - PMKID: %pM =\n",
+		&wl->pmk_list->pmkids.pmkid[wl->pmk_list->pmkids.npmkid - 1].BSSID);
 	for (i = 0; i < WPA2_PMKID_LEN; i++) {
-		WL_DBG(("%02x\n",
+		AP6210_DEBUG("%02x\n",
 			wl->pmk_list->pmkids.pmkid[wl->pmk_list->pmkids.npmkid - 1].
-			PMKID[i]));
+			PMKID[i]);
 	}
 
 	err = wl_update_pmklist(dev, wl->pmk_list, err);
@@ -3836,10 +3838,10 @@ wl_cfg80211_del_pmksa(struct wiphy *wiphy, struct net_device *dev,
 	memcpy(&pmkid.pmkid[0].BSSID, pmksa->bssid, ETHER_ADDR_LEN);
 	memcpy(pmkid.pmkid[0].PMKID, pmksa->pmkid, WPA2_PMKID_LEN);
 
-	WL_DBG(("del_pmksa,IW_PMKSA_REMOVE - PMKID: %pM =\n",
-		&pmkid.pmkid[0].BSSID));
+	AP6210_DEBUG("del_pmksa,IW_PMKSA_REMOVE - PMKID: %pM =\n",
+		&pmkid.pmkid[0].BSSID);
 	for (i = 0; i < WPA2_PMKID_LEN; i++) {
-		WL_DBG(("%02x\n", pmkid.pmkid[0].PMKID[i]));
+		AP6210_DEBUG("%02x\n", pmkid.pmkid[0].PMKID[i]);
 	}
 
 	for (i = 0; i < wl->pmk_list->pmkids.npmkid; i++)
@@ -3895,7 +3897,7 @@ wl_cfg80211_scan_alloc_params(int channel, int nprobes, int *out_params_size)
 	params_size = WL_SCAN_PARAMS_FIXED_SIZE + 1 * sizeof(uint16);
 	params = (wl_scan_params_t*) kzalloc(params_size, GFP_KERNEL);
 	if (params == NULL) {
-		WL_ERR(("%s: mem alloc failed (%d bytes)\n", __func__, params_size));
+		AP6210_ERR("%s: mem alloc failed (%d bytes)\n", __func__, params_size);
 		return params;
 	}
 	memset(params, 0, params_size);
@@ -3937,9 +3939,9 @@ wl_cfg80211_remain_on_channel(struct wiphy *wiphy, struct net_device *dev,
 	s32 err = BCME_OK;
 	struct wl_priv *wl = wiphy_priv(wiphy);
 
-	WL_DBG(("Enter, ifindex: %d, channel: %d, duration ms (%d) SCANNING ?? %s \n",
+	AP6210_DEBUG("Enter, ifindex: %d, channel: %d, duration ms (%d) SCANNING ?? %s \n",
 		dev->ifindex, ieee80211_frequency_to_channel(channel->center_freq),
-		duration, (wl_get_drv_status(wl, SCANNING, ndev)) ? "YES":"NO"));
+		duration, (wl_get_drv_status(wl, SCANNING, ndev)) ? "YES":"NO");
 
 	if (wl->p2p_net == dev) {
 		ndev = wl_to_prmry_ndev(wl);
@@ -3948,7 +3950,7 @@ wl_cfg80211_remain_on_channel(struct wiphy *wiphy, struct net_device *dev,
 	}
 
 	if (!wl->p2p) {
-		WL_ERR(("wl->p2p is not initialized\n"));
+		AP6210_ERR("wl->p2p is not initialized\n");
 		err = BCME_ERROR;
 		goto exit;
 	}
@@ -3970,12 +3972,12 @@ wl_cfg80211_remain_on_channel(struct wiphy *wiphy, struct net_device *dev,
 #ifdef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
 	if (wl_get_drv_status(wl, SCANNING, ndev)) {
 		struct timer_list *_timer;
-		WL_DBG(("scan is running. go to fake listen state\n"));
+		AP6210_DEBUG("scan is running. go to fake listen state\n");
 
 		wl_set_drv_status(wl, FAKE_REMAINING_ON_CHANNEL, ndev);
 
 		if (timer_pending(&wl->p2p->listen_timer)) {
-			WL_DBG(("cancel current listen timer \n"));
+			AP6210_DEBUG("cancel current listen timer \n");
 			del_timer_sync(&wl->p2p->listen_timer);
 		}
 
@@ -4039,11 +4041,11 @@ wl_cfg80211_remain_on_channel(struct wiphy *wiphy, struct net_device *dev,
 
 exit:
 	if (err == BCME_OK) {
-		WL_INFO(("Success\n"));
+		AP6210_DEBUG("Success\n");
 		cfg80211_ready_on_channel(dev, *cookie, channel,
 			channel_type, duration, GFP_KERNEL);
 	} else {
-		WL_ERR(("Fail to Set (err=%d cookie:%llu)\n", err, *cookie));
+		AP6210_ERR("Fail to Set (err=%d cookie:%llu)\n", err, *cookie);
 	}
 	return err;
 }
@@ -4053,7 +4055,7 @@ wl_cfg80211_cancel_remain_on_channel(struct wiphy *wiphy, struct net_device *dev
 	u64 cookie)
 {
 	s32 err = 0;
-	WL_DBG((" enter ) netdev_ifidx: %d \n", dev->ifindex));
+	AP6210_DEBUG(" enter ) netdev_ifidx: %d \n", dev->ifindex);
 	return err;
 }
 
@@ -4074,7 +4076,7 @@ wl_cfg80211_afx_handler(struct work_struct *work)
 				wl->afx_hdl->bssidx, wl->afx_hdl->peer_listen_chan);
 		}
 		if (unlikely(ret != BCME_OK)) {
-			WL_ERR(("ERROR occurred! returned value is (%d)\n", ret));
+			AP6210_ERR("ERROR occurred! returned value is (%d)\n", ret);
 			if (wl_get_drv_status_all(wl, FINDING_COMMON_CHANNEL))
 				complete(&wl->act_frm_scan);
 		}
@@ -4089,7 +4091,7 @@ wl_cfg80211_af_searching_channel(struct wl_priv *wl, struct net_device *dev)
 	if (dev == NULL)
 		return -1;
 
-	WL_DBG((" enter ) \n"));
+	AP6210_DEBUG(" enter ) \n");
 
 	wl_set_drv_status(wl, FINDING_COMMON_CHANNEL, dev);
 	wl->afx_hdl->is_active = TRUE;
@@ -4101,8 +4103,8 @@ wl_cfg80211_af_searching_channel(struct wl_priv *wl, struct net_device *dev)
 		(wl->afx_hdl->peer_chan == WL_INVALID)) {
 		wl->afx_hdl->is_listen = FALSE;
 		wl_set_drv_status(wl, SCANNING, dev);
-		WL_DBG(("Scheduling the action frame for sending.. retry %d\n",
-			wl->afx_hdl->retry));
+		AP6210_DEBUG("Scheduling the action frame for sending.. retry %d\n",
+			wl->afx_hdl->retry);
 		/* search peer on peer's listen channel */
 		schedule_work(&wl->afx_hdl->work);
 		wait_for_completion_timeout(&wl->act_frm_scan,
@@ -4113,8 +4115,8 @@ wl_cfg80211_af_searching_channel(struct wl_priv *wl, struct net_device *dev)
 			break;
 
 		if (wl->afx_hdl->my_listen_chan) {
-			WL_DBG(("Scheduling Listen peer in my listen channel = %d\n",
-				wl->afx_hdl->my_listen_chan));
+			AP6210_DEBUG("Scheduling Listen peer in my listen channel = %d\n",
+				wl->afx_hdl->my_listen_chan);
 			/* listen on my listen channel */
 			wl->afx_hdl->is_listen = TRUE;
 			schedule_work(&wl->afx_hdl->work);
@@ -4168,7 +4170,7 @@ wl_cfg80211_config_p2p_pub_af_tx(struct wiphy *wiphy,
 
 	switch (act_frm->subtype) {
 	case P2P_PAF_GON_REQ: {
-		WL_DBG(("P2P: GO_NEG_PHASE status set \n"));
+		AP6210_DEBUG("P2P: GO_NEG_PHASE status set \n");
 		wl_set_p2p_status(wl, GO_NEG_PHASE);
 
 		config_af_params->mpc_onoff = 0;
@@ -4188,7 +4190,7 @@ wl_cfg80211_config_p2p_pub_af_tx(struct wiphy *wiphy,
 	}
 	case P2P_PAF_GON_CONF: {
 		/* If we reached till GO Neg confirmation reset the filter */
-		WL_DBG(("P2P: GO_NEG_PHASE status cleared \n"));
+		AP6210_DEBUG("P2P: GO_NEG_PHASE status cleared \n");
 		wl_clr_p2p_status(wl, GO_NEG_PHASE);
 
 		/* turn on mpc again if go nego is done */
@@ -4254,8 +4256,8 @@ wl_cfg80211_config_p2p_pub_af_tx(struct wiphy *wiphy,
 		break;
 	}
 	default:
-		WL_DBG(("Unknown p2p pub act frame subtype: %d\n",
-			act_frm->subtype));
+		AP6210_DEBUG("Unknown p2p pub act frame subtype: %d\n",
+			act_frm->subtype);
 		err = BCME_BADARG;
 	}
 	return err;
@@ -4300,7 +4302,7 @@ wl_cfg80211_send_action_frame(struct wiphy *wiphy, struct net_device *dev,
 			/* p2p public action frame process */
 			if (BCME_OK != wl_cfg80211_config_p2p_pub_af_tx(wiphy,
 				action_frame, af_params, &config_af_params)) {
-				WL_DBG(("Unknown subtype.\n"));
+				AP6210_DEBUG("Unknown subtype.\n");
 			}
 
 		} else if (action_frame_len >= sizeof(wifi_p2psd_gas_pub_act_frame_t)) {
@@ -4320,17 +4322,17 @@ wl_cfg80211_send_action_frame(struct wiphy *wiphy, struct net_device *dev,
 				/* configure service discovery response frame */
 				af_params->dwell_time = WL_MIN_DWELL_TIME;
 			} else {
-				WL_DBG(("Unknown action type: %d\n", action));
+				AP6210_DEBUG("Unknown action type: %d\n", action);
 			}
 		} else {
-			WL_DBG(("Unknown Frame: category 0x%x, action 0x%x, length %d\n",
-				category, action, action_frame_len));
+			AP6210_DEBUG("Unknown Frame: category 0x%x, action 0x%x, length %d\n",
+				category, action, action_frame_len);
 		}
 	} else if (category == P2P_AF_CATEGORY) {
 		/* do not configure anything. it will be sent with a default configuration */
 	} else {
-		WL_DBG(("Unknown Frame: category 0x%x, action 0x%x\n",
-			category, action));
+		AP6210_DEBUG("Unknown Frame: category 0x%x, action 0x%x\n",
+			category, action);
 		if (dhd->op_mode & DHD_FLAG_HOSTAP_MODE) {
 			wl_clr_drv_status(wl, SENDING_ACT_FRM, dev);
 			return false;
@@ -4389,7 +4391,7 @@ wl_cfg80211_send_action_frame(struct wiphy *wiphy, struct net_device *dev,
 		wl->afx_hdl->peer_chan = WL_INVALID;
 
 		if (wl_cfg80211_af_searching_channel(wl, dev) == WL_INVALID) {
-			WL_ERR(("couldn't find peer's channel.\n"));
+			AP6210_ERR("couldn't find peer's channel.\n");
 			goto exit;
 		}
 
@@ -4429,7 +4431,7 @@ wl_cfg80211_send_action_frame(struct wiphy *wiphy, struct net_device *dev,
 			false : true;
 	}
 	if (ack == false) {
-		WL_ERR(("Failed to send Action Frame(retry %d)\n", tx_retry));
+		AP6210_ERR("Failed to send Action Frame(retry %d)\n", tx_retry);
 	}
 exit:
 	/* Clear SENDING_ACT_FRM after all sending af is done */
@@ -4450,9 +4452,9 @@ exit:
 
 		if (extar_listen_time > 50) {
 			wl_set_drv_status(wl, WAITING_NEXT_ACT_FRM_LISTEN, dev);
-			WL_DBG(("Wait more time! actual af time:%d,"
+			AP6210_DEBUG("Wait more time! actual af time:%d,"
 				"calculated extar listen:%d\n",
-				af_params->dwell_time, extar_listen_time));
+				af_params->dwell_time, extar_listen_time);
 			if (wl_cfgp2p_discover_listen(wl, wl->af_sent_channel,
 				extar_listen_time + 100) == BCME_OK) {
 				wait_for_completion_timeout(&wl->wait_next_af,
@@ -4467,8 +4469,8 @@ exit:
 	if (wl->afx_hdl->pending_tx_act_frm)
 		wl->afx_hdl->pending_tx_act_frm = NULL;
 
-	WL_INFO(("-- sending Action Frame is %s, listen chan: %d\n",
-		(ack) ? "Succeeded!!":"Failed!!", wl->afx_hdl->my_listen_chan));
+	AP6210_DEBUG("-- sending Action Frame is %s, listen chan: %d\n",
+		(ack) ? "Succeeded!!":"Failed!!", wl->afx_hdl->my_listen_chan);
 
 
 	/* if all done, turn mpc on again */
@@ -4505,7 +4507,7 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 	bool ack = false;
 	s8 eabuf[ETHER_ADDR_STR_LEN];
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 
 	if (ndev == wl->p2p_net) {
 		dev = wl_to_prmry_ndev(wl);
@@ -4518,7 +4520,7 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 	bssidx = wl_cfgp2p_find_idx(wl, dev);
 	if (bssidx == -1) {
 
-		WL_ERR(("Can not find the bssidx for dev( %p )\n", dev));
+		AP6210_ERR("Can not find the bssidx for dev( %p )\n", dev);
 		return -ENODEV;
 	}
 	if (p2p_is_on(wl)) {
@@ -4526,7 +4528,7 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 		 * channel.
 		 */
 		if ((err = wl_cfgp2p_discover_enable_search(wl, false)) < 0) {
-			WL_ERR(("Can not disable discovery mode\n"));
+			AP6210_ERR("Can not disable discovery mode\n");
 			return -EFAULT;
 		}
 	}
@@ -4553,10 +4555,10 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 			err = wldev_ioctl(dev, WLC_SCB_DEAUTHENTICATE_FOR_REASON, &scb_val,
 				sizeof(scb_val_t), true);
 			if (err < 0)
-				WL_ERR(("WLC_SCB_DEAUTHENTICATE_FOR_REASON error %d\n", err));
-			WL_DBG(("Disconnect STA : %s scb_val.val %d\n",
+				AP6210_ERR("WLC_SCB_DEAUTHENTICATE_FOR_REASON error %d\n", err);
+			AP6210_DEBUG("Disconnect STA : %s scb_val.val %d\n",
 				bcm_ether_ntoa((const struct ether_addr *)mgmt->da, eabuf),
-				scb_val.val));
+				scb_val.val);
 			wl_delay(400);
 			cfg80211_mgmt_tx_status(ndev, *cookie, buf, len, true, GFP_KERNEL);
 			goto exit;
@@ -4578,7 +4580,7 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 		}
 
 	} else {
-		WL_ERR(("Driver only allows MGMT packet type\n"));
+		AP6210_ERR("Driver only allows MGMT packet type\n");
 		goto exit;
 	}
 
@@ -4586,7 +4588,7 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 
 	if (af_params == NULL)
 	{
-		WL_ERR(("unable to allocate frame\n"));
+		AP6210_ERR("unable to allocate frame\n");
 		return -ENOMEM;
 	}
 
@@ -4594,14 +4596,14 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 
 	/* Add the packet Id */
 	action_frame->packetId = *cookie;
-	WL_DBG(("action frame %d\n", action_frame->packetId));
+	AP6210_DEBUG("action frame %d\n", action_frame->packetId);
 	/* Add BSSID */
 	memcpy(&action_frame->da, &mgmt->da[0], ETHER_ADDR_LEN);
 	memcpy(&af_params->BSSID, &mgmt->bssid[0], ETHER_ADDR_LEN);
 
 	/* Add the length exepted for 802.11 header  */
 	action_frame->len = len - DOT11_MGMT_HDR_LEN;
-	WL_DBG(("action_frame->len: %d\n", action_frame->len));
+	AP6210_DEBUG("action_frame->len: %d\n", action_frame->len);
 
 	/* Add the channel */
 	af_params->channel =
@@ -4609,7 +4611,7 @@ wl_cfg80211_mgmt_tx(struct wiphy *wiphy, struct net_device *ndev,
 
 	/* Save listen_chan for searching common channel */
 	wl->afx_hdl->peer_listen_chan = af_params->channel;
-	WL_DBG(("channel from upper layer %d\n", wl->afx_hdl->peer_listen_chan));
+	AP6210_DEBUG("channel from upper layer %d\n", wl->afx_hdl->peer_listen_chan);
 
 	/* Add the default dwell time
 	 * Dwell time to stay off-channel to wait for a response action frame
@@ -4635,7 +4637,7 @@ wl_cfg80211_mgmt_frame_register(struct wiphy *wiphy, struct net_device *dev,
 	u16 frame_type, bool reg)
 {
 
-	WL_DBG(("%s: frame_type: %x, reg: %d\n", __func__, frame_type, reg));
+	AP6210_DEBUG("%s: frame_type: %x, reg: %d\n", __func__, frame_type, reg);
 
 	if (frame_type != (IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_PROBE_REQ))
 		return;
@@ -4692,8 +4694,8 @@ wl_cfg80211_set_channel(struct wiphy *wiphy, struct net_device *dev,
 		dev = wl_to_prmry_ndev(wl);
 	}
 	_chan = ieee80211_frequency_to_channel(chan->center_freq);
-	WL_ERR(("netdev_ifidx(%d), chan_type(%d) target channel(%d) \n",
-		dev->ifindex, channel_type, _chan));
+	AP6210_ERR("netdev_ifidx(%d), chan_type(%d) target channel(%d) \n",
+		dev->ifindex, channel_type, _chan);
 
 
 	if (chan->band == IEEE80211_BAND_5GHZ) {
@@ -4702,12 +4704,12 @@ wl_cfg80211_set_channel(struct wiphy *wiphy, struct net_device *dev,
 			wl->ioctl_buf, WLC_IOCTL_SMLEN, &wl->ioctl_buf_sync);
 		if (err) {
 			if (err != BCME_UNSUPPORTED) {
-				WL_ERR(("bw_cap failed, %d\n", err));
+				AP6210_ERR("bw_cap failed, %d\n", err);
 				return err;
 			} else {
 				err = wldev_iovar_getint(dev, "mimo_bw_cap", &bw_cap);
 				if (err) {
-					WL_ERR(("error get mimo_bw_cap (%d)\n", err));
+					AP6210_ERR("error get mimo_bw_cap (%d)\n", err);
 				}
 				if (bw_cap != WLC_N_BW_20ALL)
 					bw = WL_CHANSPEC_BW_40;
@@ -4736,14 +4738,14 @@ set_channel:
 				err = wldev_ioctl(dev, WLC_SET_CHANNEL,
 					&_chan, sizeof(_chan), true);
 				if (err < 0) {
-					WL_ERR(("WLC_SET_CHANNEL error %d"
-					"chip may not be supporting this channel\n", err));
+					AP6210_ERR("WLC_SET_CHANNEL error %d"
+					"chip may not be supporting this channel\n", err);
 				}
 			} else if (err) {
-				WL_ERR(("failed to set chanspec error %d\n", err));
+				AP6210_ERR("failed to set chanspec error %d\n", err);
 			}
 		} else {
-			WL_ERR(("failed to convert host chanspec to fw chanspec\n"));
+			AP6210_ERR("failed to convert host chanspec to fw chanspec\n");
 			err = BCME_ERROR;
 		}
 	} else {
@@ -4756,7 +4758,7 @@ change_bw:
 			bw = 0;
 		if (bw)
 			goto set_channel;
-		WL_ERR(("Invalid chanspec 0x%x\n", chspec));
+		AP6210_ERR("Invalid chanspec 0x%x\n", chspec);
 		err = BCME_ERROR;
 	}
 	return err;
@@ -4770,19 +4772,19 @@ wl_validate_opensecurity(struct net_device *dev, s32 bssidx)
 	/* set auth */
 	err = wldev_iovar_setint_bsscfg(dev, "auth", 0, bssidx);
 	if (err < 0) {
-		WL_ERR(("auth error %d\n", err));
+		AP6210_ERR("auth error %d\n", err);
 		return BCME_ERROR;
 	}
 	/* set wsec */
 	err = wldev_iovar_setint_bsscfg(dev, "wsec", 0, bssidx);
 	if (err < 0) {
-		WL_ERR(("wsec error %d\n", err));
+		AP6210_ERR("wsec error %d\n", err);
 		return BCME_ERROR;
 	}
 	/* set upper-layer auth */
 	err = wldev_iovar_setint_bsscfg(dev, "wpa_auth", WPA_AUTH_NONE, bssidx);
 	if (err < 0) {
-		WL_ERR(("wpa_auth error %d\n", err));
+		AP6210_ERR("wpa_auth error %d\n", err);
 		return BCME_ERROR;
 	}
 
@@ -4810,7 +4812,7 @@ wl_validate_wpa2ie(struct net_device *dev, bcm_tlv_t *wpa2ie, s32 bssidx)
 	if (wpa2ie == NULL)
 		goto exit;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	len =  wpa2ie->len;
 	/* check the mcast cipher */
 	mcast = (wpa_suite_mcast_t *)&wpa2ie->data[WPA2_VERSION_LEN];
@@ -4834,7 +4836,7 @@ wl_validate_wpa2ie(struct net_device *dev, bcm_tlv_t *wpa2ie, s32 bssidx)
 			break;
 #endif
 		default:
-			WL_ERR(("No Security Info\n"));
+			AP6210_ERR("No Security Info\n");
 			break;
 	}
 	if ((len -= WPA_SUITE_LEN) <= 0)
@@ -4863,7 +4865,7 @@ wl_validate_wpa2ie(struct net_device *dev, bcm_tlv_t *wpa2ie, s32 bssidx)
 			break;
 #endif
 		default:
-			WL_ERR(("No Security Info\n"));
+			AP6210_ERR("No Security Info\n");
 	}
 	if ((len -= (WPA_IE_SUITE_COUNT_LEN + (WPA_SUITE_LEN * suite_count))) <= 0)
 		return BCME_BADLEN;
@@ -4884,7 +4886,7 @@ wl_validate_wpa2ie(struct net_device *dev, bcm_tlv_t *wpa2ie, s32 bssidx)
 			wpa_auth = WPA2_AUTH_PSK;
 			break;
 		default:
-			WL_ERR(("No Key Mgmt Info\n"));
+			AP6210_ERR("No Key Mgmt Info\n");
 	}
 
 	if ((len -= (WPA_IE_SUITE_COUNT_LEN + (WPA_SUITE_LEN * suite_count))) >= RSN_CAP_LEN) {
@@ -4900,29 +4902,29 @@ wl_validate_wpa2ie(struct net_device *dev, bcm_tlv_t *wpa2ie, s32 bssidx)
 		/* set wme_bss_disable to sync RSN Capabilities */
 		err = wldev_iovar_setint_bsscfg(dev, "wme_bss_disable", wme_bss_disable, bssidx);
 		if (err < 0) {
-			WL_ERR(("wme_bss_disable error %d\n", err));
+			AP6210_ERR("wme_bss_disable error %d\n", err);
 			return BCME_ERROR;
 		}
 	} else {
-		WL_DBG(("There is no RSN Capabilities. remained len %d\n", len));
+		AP6210_DEBUG("There is no RSN Capabilities. remained len %d\n", len);
 	}
 
 	/* set auth */
 	err = wldev_iovar_setint_bsscfg(dev, "auth", auth, bssidx);
 	if (err < 0) {
-		WL_ERR(("auth error %d\n", err));
+		AP6210_ERR("auth error %d\n", err);
 		return BCME_ERROR;
 	}
 	/* set wsec */
 	err = wldev_iovar_setint_bsscfg(dev, "wsec", wsec, bssidx);
 	if (err < 0) {
-		WL_ERR(("wsec error %d\n", err));
+		AP6210_ERR("wsec error %d\n", err);
 		return BCME_ERROR;
 	}
 	/* set upper-layer auth */
 	err = wldev_iovar_setint_bsscfg(dev, "wpa_auth", wpa_auth, bssidx);
 	if (err < 0) {
-		WL_ERR(("wpa_auth error %d\n", err));
+		AP6210_ERR("wpa_auth error %d\n", err);
 		return BCME_ERROR;
 	}
 exit:
@@ -4948,12 +4950,12 @@ wl_validate_wpaie(struct net_device *dev, wpa_ie_fixed_t *wpaie, s32 bssidx)
 
 	if (wpaie == NULL)
 		goto exit;
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	len = wpaie->length;    /* value length */
 	len -= WPA_IE_TAG_FIXED_LEN;
 	/* check for multicast cipher suite */
 	if (len < WPA_SUITE_LEN) {
-		WL_INFO(("no multicast cipher suite\n"));
+		AP6210_DEBUG("no multicast cipher suite\n");
 		goto exit;
 	}
 
@@ -4978,14 +4980,14 @@ wl_validate_wpaie(struct net_device *dev, wpa_ie_fixed_t *wpaie, s32 bssidx)
 					tmp = AES_ENABLED;
 					break;
 				default:
-					WL_ERR(("No Security Info\n"));
+					AP6210_ERR("No Security Info\n");
 			}
 			gval |= tmp;
 		}
 	}
 	/* Check for unicast suite(s) */
 	if (len < WPA_IE_SUITE_COUNT_LEN) {
-		WL_INFO(("no unicast suite\n"));
+		AP6210_DEBUG("no unicast suite\n");
 		goto exit;
 	}
 	/* walk thru unicast cipher list and pick up what we recognize */
@@ -5012,7 +5014,7 @@ wl_validate_wpaie(struct net_device *dev, wpa_ie_fixed_t *wpaie, s32 bssidx)
 						tmp = AES_ENABLED;
 						break;
 					default:
-						WL_ERR(("No Security Info\n"));
+						AP6210_ERR("No Security Info\n");
 				}
 				pval |= tmp;
 			}
@@ -5021,7 +5023,7 @@ wl_validate_wpaie(struct net_device *dev, wpa_ie_fixed_t *wpaie, s32 bssidx)
 	len -= (count - i) * WPA_SUITE_LEN;
 	/* Check for auth key management suite(s) */
 	if (len < WPA_IE_SUITE_COUNT_LEN) {
-		WL_INFO((" no auth key mgmt suite\n"));
+		AP6210_DEBUG(" no auth key mgmt suite\n");
 		goto exit;
 	}
 	/* walk thru auth management suite list and pick up what we recognize */
@@ -5044,7 +5046,7 @@ wl_validate_wpaie(struct net_device *dev, wpa_ie_fixed_t *wpaie, s32 bssidx)
 						tmp = WPA_AUTH_PSK;
 						break;
 					default:
-						WL_ERR(("No Key Mgmt Info\n"));
+						AP6210_ERR("No Key Mgmt Info\n");
 				}
 				wpa_auth |= tmp;
 			}
@@ -5056,19 +5058,19 @@ wl_validate_wpaie(struct net_device *dev, wpa_ie_fixed_t *wpaie, s32 bssidx)
 	/* set auth */
 	err = wldev_iovar_setint_bsscfg(dev, "auth", auth, bssidx);
 	if (err < 0) {
-		WL_ERR(("auth error %d\n", err));
+		AP6210_ERR("auth error %d\n", err);
 		return BCME_ERROR;
 	}
 	/* set wsec */
 	err = wldev_iovar_setint_bsscfg(dev, "wsec", wsec, bssidx);
 	if (err < 0) {
-		WL_ERR(("wsec error %d\n", err));
+		AP6210_ERR("wsec error %d\n", err);
 		return BCME_ERROR;
 	}
 	/* set upper-layer auth */
 	err = wldev_iovar_setint_bsscfg(dev, "wpa_auth", wpa_auth, bssidx);
 	if (err < 0) {
-		WL_ERR(("wpa_auth error %d\n", err));
+		AP6210_ERR("wpa_auth error %d\n", err);
 		return BCME_ERROR;
 	}
 exit:
@@ -5086,13 +5088,13 @@ wl_cfg80211_bcn_validate_sec(
 
 	if (dev_role == NL80211_IFTYPE_P2P_GO && (ies->wpa2_ie)) {
 		/* For P2P GO, the sec type is WPA2-PSK */
-		WL_DBG(("P2P GO: validating wpa2_ie"));
+		AP6210_DEBUG("P2P GO: validating wpa2_ie");
 		if (wl_validate_wpa2ie(dev, ies->wpa2_ie, bssidx)  < 0)
 			return BCME_ERROR;
 
 	} else if (dev_role == NL80211_IFTYPE_AP) {
 
-		WL_DBG(("SoftAP: validating security"));
+		AP6210_DEBUG("SoftAP: validating security");
 		/* If wpa2_ie or wpa_ie is present validate it */
 		if ((ies->wpa2_ie || ies->wpa_ie) &&
 			((wl_validate_wpa2ie(dev, ies->wpa2_ie, bssidx)  < 0 ||
@@ -5151,13 +5153,13 @@ static s32 wl_cfg80211_bcn_set_params(
 	struct wl_priv *wl = wlcfg_drv_priv;
 	s32 err = BCME_OK;
 
-	WL_DBG(("interval (%d) \ndtim_period (%d) \n",
-		info->beacon_interval, info->dtim_period));
+	AP6210_DEBUG("interval (%d) \ndtim_period (%d) \n",
+		info->beacon_interval, info->dtim_period);
 
 	if (info->beacon_interval) {
 		if ((err = wldev_ioctl(dev, WLC_SET_BCNPRD,
 			&info->beacon_interval, sizeof(s32), true)) < 0) {
-			WL_ERR(("Beacon Interval Set Error, %d\n", err));
+			AP6210_ERR("Beacon Interval Set Error, %d\n", err);
 			return err;
 		}
 	}
@@ -5165,14 +5167,14 @@ static s32 wl_cfg80211_bcn_set_params(
 	if (info->dtim_period) {
 		if ((err = wldev_ioctl(dev, WLC_SET_DTIMPRD,
 			&info->dtim_period, sizeof(s32), true)) < 0) {
-			WL_ERR(("DTIM Interval Set Error, %d\n", err));
+			AP6210_ERR("DTIM Interval Set Error, %d\n", err);
 			return err;
 		}
 	}
 
 	if ((info->ssid) && (info->ssid_len > 0) &&
 		(info->ssid_len <= 32)) {
-		WL_DBG(("SSID (%s) len:%d \n", info->ssid, info->ssid_len));
+		AP6210_DEBUG("SSID (%s) len:%d \n", info->ssid, info->ssid_len);
 		if (dev_role == NL80211_IFTYPE_AP) {
 			/* Store the hostapd SSID */
 			memset(wl->hostapd_ssid.SSID, 0x00, 32);
@@ -5188,8 +5190,8 @@ static s32 wl_cfg80211_bcn_set_params(
 
 	if (info->hidden_ssid) {
 		if ((err = wldev_iovar_setint(dev, "closednet", 1)) < 0)
-			WL_ERR(("failed to set hidden : %d\n", err));
-		WL_DBG(("hidden_ssid_enum_val: %d \n", info->hidden_ssid));
+			AP6210_ERR("failed to set hidden : %d\n", err);
+		AP6210_DEBUG("hidden_ssid_enum_val: %d \n", info->hidden_ssid);
 	}
 
 	return err;
@@ -5205,22 +5207,22 @@ wl_cfg80211_parse_ies(u8 *ptr, u32 len, struct parsed_ies *ies)
 
 	/* find the WPSIE */
 	if ((ies->wps_ie = wl_cfgp2p_find_wpsie(ptr, len)) != NULL) {
-		WL_DBG(("WPSIE in beacon \n"));
+		AP6210_DEBUG("WPSIE in beacon \n");
 		ies->wps_ie_len = ies->wps_ie->length + WPA_RSN_IE_TAG_FIXED_LEN;
 	} else {
-		WL_ERR(("No WPSIE in beacon \n"));
+		AP6210_ERR("No WPSIE in beacon \n");
 	}
 
 	/* find the RSN_IE */
 	if ((ies->wpa2_ie = bcm_parse_tlvs(ptr, len,
 		DOT11_MNG_RSN_ID)) != NULL) {
-		WL_DBG((" WPA2 IE found\n"));
+		AP6210_DEBUG(" WPA2 IE found\n");
 		ies->wpa2_ie_len = ies->wpa2_ie->len;
 	}
 
 	/* find the WPA_IE */
 	if ((ies->wpa_ie = wl_cfgp2p_find_wpaie(ptr, len)) != NULL) {
-		WL_DBG((" WPA found\n"));
+		AP6210_DEBUG(" WPA found\n");
 		ies->wpa_ie_len = ies->wpa_ie->length;
 	}
 
@@ -5242,7 +5244,7 @@ wl_cfg80211_bcn_bringup_ap(
 	s32 ap = 1;
 	s32 err = BCME_OK;
 
-	WL_DBG(("Enter dev_role: %d\n", dev_role));
+	AP6210_DEBUG("Enter dev_role: %d\n", dev_role);
 
 	/* Common code for SoftAP and P2P GO */
 	wldev_iovar_setint(dev, "mpc", 0);
@@ -5253,7 +5255,7 @@ wl_cfg80211_bcn_bringup_ap(
 
 			err = wldev_ioctl(dev, WLC_SET_INFRA, &infra, sizeof(s32), true);
 			if (err < 0) {
-				WL_ERR(("SET INFRA error %d\n", err));
+				AP6210_ERR("SET INFRA error %d\n", err);
 				goto exit;
 			}
 
@@ -5261,37 +5263,37 @@ wl_cfg80211_bcn_bringup_ap(
 				sizeof(wl->p2p->ssid), wl->ioctl_buf, WLC_IOCTL_MAXLEN,
 				bssidx, &wl->ioctl_buf_sync);
 			if (err < 0) {
-				WL_ERR(("GO SSID setting error %d\n", err));
+				AP6210_ERR("GO SSID setting error %d\n", err);
 				goto exit;
 			}
 
 			if ((err = wl_cfgp2p_bss(wl, dev, bssidx, 1)) < 0) {
-				WL_ERR(("GO Bring up error %d\n", err));
+				AP6210_ERR("GO Bring up error %d\n", err);
 				goto exit;
 			}
 		} else
-			WL_DBG(("Bss is already up\n"));
+			AP6210_DEBUG("Bss is already up\n");
 	} else if ((dev_role == NL80211_IFTYPE_AP) &&
 		(wl_get_drv_status(wl, AP_CREATING, dev))) {
 		/* Device role SoftAP */
 		err = wldev_ioctl(dev, WLC_DOWN, &ap, sizeof(s32), true);
 		if (err < 0) {
-			WL_ERR(("WLC_DOWN error %d\n", err));
+			AP6210_ERR("WLC_DOWN error %d\n", err);
 			goto exit;
 		}
 		err = wldev_ioctl(dev, WLC_SET_INFRA, &infra, sizeof(s32), true);
 		if (err < 0) {
-			WL_ERR(("SET INFRA error %d\n", err));
+			AP6210_ERR("SET INFRA error %d\n", err);
 			goto exit;
 		}
 		if ((err = wldev_ioctl(dev, WLC_SET_AP, &ap, sizeof(s32), true)) < 0) {
-			WL_ERR(("setting AP mode failed %d \n", err));
+			AP6210_ERR("setting AP mode failed %d \n", err);
 			goto exit;
 		}
 
 		err = wldev_ioctl(dev, WLC_UP, &ap, sizeof(s32), true);
 		if (unlikely(err)) {
-			WL_ERR(("WLC_UP error (%d)\n", err));
+			AP6210_ERR("WLC_UP error (%d)\n", err);
 			goto exit;
 		}
 
@@ -5305,7 +5307,7 @@ wl_cfg80211_bcn_bringup_ap(
 		/* create softap */
 		if ((err = wldev_ioctl(dev, WLC_SET_SSID, &join_params,
 			join_params_size, true)) == 0) {
-			WL_DBG(("SoftAP set SSID (%s) success\n", join_params.ssid.SSID));
+			AP6210_DEBUG("SoftAP set SSID (%s) success\n", join_params.ssid.SSID);
 			wl_clr_drv_status(wl, AP_CREATING, dev);
 			wl_set_drv_status(wl, AP_CREATED, dev);
 		}
@@ -5335,7 +5337,7 @@ wl_cfg80211_parse_set_ies(
 	/* Parse Beacon IEs */
 	if (wl_cfg80211_parse_ies((u8 *)info->tail,
 		info->tail_len, ies) < 0) {
-		WL_ERR(("Beacon get IEs failed \n"));
+		AP6210_ERR("Beacon get IEs failed \n");
 		err = -EINVAL;
 		goto fail;
 	}
@@ -5344,15 +5346,15 @@ wl_cfg80211_parse_set_ies(
 	if ((err = wl_cfgp2p_set_management_ie(wl, dev, bssidx,
 		VNDR_IE_BEACON_FLAG, (u8 *)info->tail,
 		info->tail_len)) < 0) {
-		WL_ERR(("Set Beacon IE Failed \n"));
+		AP6210_ERR("Set Beacon IE Failed \n");
 	} else {
-		WL_DBG(("Applied Vndr IEs for Beacon \n"));
+		AP6210_DEBUG("Applied Vndr IEs for Beacon \n");
 	}
 
 	/* Parse Probe Response IEs */
 	if (wl_cfg80211_parse_ies((u8 *)info->proberesp_ies,
 		info->proberesp_ies_len, &prb_ies) < 0) {
-		WL_ERR(("PRB RESP get IEs failed \n"));
+		AP6210_ERR("PRB RESP get IEs failed \n");
 		err = -EINVAL;
 		goto fail;
 	}
@@ -5361,9 +5363,9 @@ wl_cfg80211_parse_set_ies(
 	if ((err = wl_cfgp2p_set_management_ie(wl, dev, bssidx,
 		VNDR_IE_PRBRSP_FLAG, (u8 *)info->proberesp_ies,
 		info->proberesp_ies_len)) < 0) {
-		WL_ERR(("Set Probe Resp IE Failed \n"));
+		AP6210_ERR("Set Probe Resp IE Failed \n");
 	} else {
-		WL_DBG(("Applied Vndr IEs for Probe Resp \n"));
+		AP6210_DEBUG("Applied Vndr IEs for Probe Resp \n");
 	}
 
 fail:
@@ -5384,11 +5386,11 @@ static s32 wl_cfg80211_hostapd_sec(
 	if (ies->wps_ie) {
 		if (wl->ap_info->wps_ie &&
 			memcmp(wl->ap_info->wps_ie, ies->wps_ie, ies->wps_ie_len)) {
-			WL_DBG((" WPS IE is changed\n"));
+			AP6210_DEBUG(" WPS IE is changed\n");
 			kfree(wl->ap_info->wps_ie);
 			wl->ap_info->wps_ie = kmemdup(ies->wps_ie, ies->wps_ie_len, GFP_KERNEL);
 		} else if (wl->ap_info->wps_ie == NULL) {
-			WL_DBG((" WPS IE is added\n"));
+			AP6210_DEBUG(" WPS IE is added\n");
 			wl->ap_info->wps_ie = kmemdup(ies->wps_ie, ies->wps_ie_len, GFP_KERNEL);
 		}
 		if ((ies->wpa_ie != NULL || ies->wpa2_ie != NULL)) {
@@ -5435,7 +5437,7 @@ static s32 wl_cfg80211_hostapd_sec(
 			}
 		}
 	} else {
-		WL_ERR(("No WPSIE in beacon \n"));
+		AP6210_ERR("No WPSIE in beacon \n");
 	}
 	return 0;
 }
@@ -5453,9 +5455,9 @@ wl_cfg80211_del_station(
 	scb_val_t scb_val;
 	s8 eabuf[ETHER_ADDR_STR_LEN];
 
-	WL_DBG(("Entry\n"));
+	AP6210_DEBUG("Entry\n");
 	if (mac_addr == NULL) {
-		WL_DBG(("mac_addr is NULL ignore it\n"));
+		AP6210_DEBUG("mac_addr is NULL ignore it\n");
 		return 0;
 	}
 
@@ -5470,7 +5472,7 @@ wl_cfg80211_del_station(
 		 * channel.
 		 */
 		if ((wl_cfgp2p_discover_enable_search(wl, false)) < 0) {
-			WL_ERR(("Can not disable discovery mode\n"));
+			AP6210_ERR("Can not disable discovery mode\n");
 			return -EFAULT;
 		}
 	}
@@ -5479,10 +5481,10 @@ wl_cfg80211_del_station(
 	scb_val.val = DOT11_RC_DEAUTH_LEAVING;
 	if (wldev_ioctl(dev, WLC_SCB_DEAUTHENTICATE_FOR_REASON, &scb_val,
 		sizeof(scb_val_t), true))
-		WL_ERR(("WLC_SCB_DEAUTHENTICATE_FOR_REASON failed\n"));
-	WL_DBG(("Disconnect STA : %s scb_val.val %d\n",
+		AP6210_ERR("WLC_SCB_DEAUTHENTICATE_FOR_REASON failed\n");
+	AP6210_DEBUG("Disconnect STA : %s scb_val.val %d\n",
 		bcm_ether_ntoa((const struct ether_addr *)mac_addr, eabuf),
-		scb_val.val));
+		scb_val.val);
 	wl_delay(400);
 	return 0;
 }
@@ -5501,13 +5503,13 @@ wl_cfg80211_start_ap(
 	s32 bssidx = 0;
 	u32 dev_role = 0;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	if (dev == wl_to_prmry_ndev(wl)) {
-		WL_DBG(("Start AP req on primary iface: Softap\n"));
+		AP6210_DEBUG("Start AP req on primary iface: Softap\n");
 		dev_role = NL80211_IFTYPE_AP;
 	} else if (dev == wl->p2p_net) {
 		/* Group Add request on p2p0 */
-		WL_DBG(("Start AP req on P2P iface: GO\n"));
+		AP6210_DEBUG("Start AP req on P2P iface: GO\n");
 		dev = wl_to_prmry_ndev(wl);
 		dev_role = NL80211_IFTYPE_P2P_GO;
 	}
@@ -5517,40 +5519,40 @@ wl_cfg80211_start_ap(
 		(bssidx == wl_to_p2p_bss_bssidx(wl,
 		P2PAPI_BSSCFG_CONNECTION))) {
 		dev_role = NL80211_IFTYPE_P2P_GO;
-		WL_DBG(("Start AP req on P2P connection iface\n"));
+		AP6210_DEBUG("Start AP req on P2P connection iface\n");
 	}
 
 	if ((err = wl_cfg80211_bcn_set_params(info, dev,
 		dev_role, bssidx)) < 0) {
-		WL_ERR(("Beacon params set failed \n"));
+		AP6210_ERR("Beacon params set failed \n");
 		goto fail;
 	}
 
 	/* Set IEs to FW */
 	if ((err = wl_cfg80211_parse_set_ies(dev, &info->beacon,
 		&ies, dev_role, bssidx) < 0)) {
-		WL_ERR(("Set IEs failed \n"));
+		AP6210_ERR("Set IEs failed \n");
 		goto fail;
 	}
 
 	if ((wl_cfg80211_bcn_validate_sec(dev, &ies,
 		dev_role, bssidx)) < 0)
 	{
-		WL_ERR(("Beacon set security failed \n"));
+		AP6210_ERR("Beacon set security failed \n");
 		goto fail;
 	}
 
 	if ((err = wl_cfg80211_bcn_bringup_ap(dev, &ies,
 		dev_role, bssidx)) < 0) {
-		WL_ERR(("Beacon bring up AP/GO failed \n"));
+		AP6210_ERR("Beacon bring up AP/GO failed \n");
 		goto fail;
 	}
 
-	WL_DBG(("** AP/GO Created **\n"));
+	AP6210_DEBUG("** AP/GO Created **\n");
 
 fail:
 	if (err) {
-		WL_ERR(("ADD/SET beacon failed\n"));
+		AP6210_ERR("ADD/SET beacon failed\n");
 		wldev_iovar_setint(dev, "mpc", 1);
 	}
 
@@ -5569,7 +5571,7 @@ wl_cfg80211_stop_ap(
 	s32 bssidx = 0;
 	struct wl_priv *wl = wiphy_priv(wiphy);
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	if (dev == wl_to_prmry_ndev(wl)) {
 		dev_role = NL80211_IFTYPE_AP;
 	} else if (dev == wl->p2p_net) {
@@ -5590,19 +5592,19 @@ wl_cfg80211_stop_ap(
 		 */
 		err = wldev_ioctl(dev, WLC_SET_INFRA, &infra, sizeof(s32), true);
 		if (err < 0) {
-			WL_ERR(("SET INFRA error %d\n", err));
+			AP6210_ERR("SET INFRA error %d\n", err);
 			err = -ENOTSUPP;
 			goto exit;
 		}
 		if ((err = wldev_ioctl(dev, WLC_SET_AP, &ap, sizeof(s32), true)) < 0) {
-			WL_ERR(("setting AP mode failed %d \n", err));
+			AP6210_ERR("setting AP mode failed %d \n", err);
 			err = -ENOTSUPP;
 			goto exit;
 		}
 
 		err = wldev_ioctl(dev, WLC_UP, &ap, sizeof(s32), true);
 		if (unlikely(err)) {
-			WL_ERR(("WLC_UP error (%d)\n", err));
+			AP6210_ERR("WLC_UP error (%d)\n", err);
 			err = -EINVAL;
 			goto exit;
 		}
@@ -5611,7 +5613,7 @@ wl_cfg80211_stop_ap(
 		/* Turn on the MPC */
 		wldev_iovar_setint(dev, "mpc", 1);
 	} else {
-		WL_DBG(("Stopping P2P GO \n"));
+		AP6210_DEBUG("Stopping P2P GO \n");
 	}
 
 exit:
@@ -5630,7 +5632,7 @@ wl_cfg80211_change_beacon(
 	u32 dev_role = 0;
 	s32 bssidx = 0;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 
 	if (dev == wl_to_prmry_ndev(wl)) {
 		dev_role = NL80211_IFTYPE_AP;
@@ -5650,13 +5652,13 @@ wl_cfg80211_change_beacon(
 	/* Set IEs to FW */
 	if ((err = wl_cfg80211_parse_set_ies(dev, info,
 		&ies, dev_role, bssidx) < 0)) {
-		WL_ERR(("Set IEs failed \n"));
+		AP6210_ERR("Set IEs failed \n");
 		goto fail;
 	}
 
 	if (dev_role == NL80211_IFTYPE_AP) {
 		if (wl_cfg80211_hostapd_sec(dev, &ies, bssidx) < 0) {
-			WL_ERR(("Hostapd update sec failed \n"));
+			AP6210_ERR("Hostapd update sec failed \n");
 			err = -EINVAL;
 			goto fail;
 		}
@@ -5679,8 +5681,8 @@ wl_cfg80211_add_set_beacon(struct wiphy *wiphy, struct net_device *dev,
 	bcm_tlv_t *ssid_ie;
 	bool pbc = 0;
 
-	WL_DBG(("interval (%d) dtim_period (%d) head_len (%d) tail_len (%d)\n",
-		info->interval, info->dtim_period, info->head_len, info->tail_len));
+	AP6210_DEBUG("interval (%d) dtim_period (%d) head_len (%d) tail_len (%d)\n",
+		info->interval, info->dtim_period, info->head_len, info->tail_len);
 
 	if (dev == wl_to_prmry_ndev(wl)) {
 		dev_role = NL80211_IFTYPE_AP;
@@ -5717,7 +5719,7 @@ wl_cfg80211_add_set_beacon(struct wiphy *wiphy, struct net_device *dev,
 
 	if (wl_cfg80211_parse_ies((u8 *)info->tail,
 		info->tail_len, &ies) < 0) {
-		WL_ERR(("Beacon get IEs failed \n"));
+		AP6210_ERR("Beacon get IEs failed \n");
 		err = -EINVAL;
 		goto fail;
 	}
@@ -5725,15 +5727,15 @@ wl_cfg80211_add_set_beacon(struct wiphy *wiphy, struct net_device *dev,
 	if (wl_cfgp2p_set_management_ie(wl, dev, bssidx,
 		VNDR_IE_BEACON_FLAG, (u8 *)info->tail,
 		info->tail_len) < 0) {
-		WL_ERR(("Beacon set IEs failed \n"));
+		AP6210_ERR("Beacon set IEs failed \n");
 		goto fail;
 	} else {
-		WL_DBG(("Applied Vndr IEs for Beacon \n"));
+		AP6210_DEBUG("Applied Vndr IEs for Beacon \n");
 	}
 	if (!wl_cfgp2p_bss_isup(dev, bssidx) &&
 		(wl_cfg80211_bcn_validate_sec(dev, &ies, dev_role, bssidx) < 0))
 	{
-		WL_ERR(("Beacon set security failed \n"));
+		AP6210_ERR("Beacon set security failed \n");
 		goto fail;
 	}
 
@@ -5741,27 +5743,27 @@ wl_cfg80211_add_set_beacon(struct wiphy *wiphy, struct net_device *dev,
 	if (info->interval) {
 		if ((err = wldev_ioctl(dev, WLC_SET_BCNPRD,
 			&info->interval, sizeof(s32), true)) < 0) {
-			WL_ERR(("Beacon Interval Set Error, %d\n", err));
+			AP6210_ERR("Beacon Interval Set Error, %d\n", err);
 			return err;
 		}
 	}
 	if (info->dtim_period) {
 		if ((err = wldev_ioctl(dev, WLC_SET_DTIMPRD,
 			&info->dtim_period, sizeof(s32), true)) < 0) {
-			WL_ERR(("DTIM Interval Set Error, %d\n", err));
+			AP6210_ERR("DTIM Interval Set Error, %d\n", err);
 			return err;
 		}
 	}
 
 	if (wl_cfg80211_bcn_bringup_ap(dev, &ies, dev_role, bssidx) < 0) {
-		WL_ERR(("Beacon bring up AP/GO failed \n"));
+		AP6210_ERR("Beacon bring up AP/GO failed \n");
 		goto fail;
 	}
 
 	if (wl_get_drv_status(wl, AP_CREATED, dev)) {
 		/* Soft AP already running. Update changed params */
 		if (wl_cfg80211_hostapd_sec(dev, &ies, bssidx) < 0) {
-			WL_ERR(("Hostapd update sec failed \n"));
+			AP6210_ERR("Hostapd update sec failed \n");
 			err = -EINVAL;
 			goto fail;
 		}
@@ -5775,11 +5777,11 @@ wl_cfg80211_add_set_beacon(struct wiphy *wiphy, struct net_device *dev,
 			wl_add_remove_eventmsg(dev, WLC_E_PROBREQ_MSG, true);
 	}
 
-	WL_DBG(("** ADD/SET beacon done **\n"));
+	AP6210_DEBUG("** ADD/SET beacon done **\n");
 
 fail:
 	if (err) {
-		WL_ERR(("ADD/SET beacon failed\n"));
+		AP6210_ERR("ADD/SET beacon failed\n");
 		wldev_iovar_setint(dev, "mpc", 1);
 	}
 	return err;
@@ -5805,16 +5807,16 @@ int wl_cfg80211_sched_scan_start(struct wiphy *wiphy,
 	int i;
 	int ret = 0;
 
-	WL_DBG(("Enter \n"));
-	WL_PNO((">>> SCHED SCAN START\n"));
-	WL_PNO(("Enter n_match_sets:%d   n_ssids:%d \n",
-		request->n_match_sets, request->n_ssids));
-	WL_PNO(("ssids:%d pno_time:%d pno_repeat:%d pno_freq:%d \n",
-		request->n_ssids, pno_time, pno_repeat, pno_freq_expo_max));
+	AP6210_DEBUG("Enter \n");
+	AP6210_DEBUG(">>> SCHED SCAN START\n");
+	AP6210_DEBUG("Enter n_match_sets:%d   n_ssids:%d \n",
+		request->n_match_sets, request->n_ssids);
+	AP6210_DEBUG("ssids:%d pno_time:%d pno_repeat:%d pno_freq:%d \n",
+		request->n_ssids, pno_time, pno_repeat, pno_freq_expo_max);
 
 
 	if (!request || !request->n_ssids || !request->n_match_sets) {
-		WL_ERR(("Invalid sched scan req!! n_ssids:%d \n", request->n_ssids));
+		AP6210_ERR("Invalid sched scan req!! n_ssids:%d \n", request->n_ssids);
 		return -EINVAL;
 	}
 
@@ -5825,7 +5827,7 @@ int wl_cfg80211_sched_scan_start(struct wiphy *wiphy,
 			ssid = &request->match_sets[i].ssid;
 			memcpy(ssids_local[i].SSID, ssid->ssid, ssid->ssid_len);
 			ssids_local[i].SSID_len = ssid->ssid_len;
-			WL_PNO((">>> PNO filter set for ssid (%s) \n", ssid->ssid));
+			AP6210_DEBUG(">>> PNO filter set for ssid (%s) \n", ssid->ssid);
 			ssid_count++;
 		}
 	}
@@ -5833,7 +5835,7 @@ int wl_cfg80211_sched_scan_start(struct wiphy *wiphy,
 	if (request->n_ssids > 0) {
 		for (i = 0; i < request->n_ssids; i++) {
 			/* Active scan req for ssids */
-			WL_PNO((">>> Active scan req for ssid (%s) \n", request->ssids[i].ssid));
+			AP6210_DEBUG(">>> Active scan req for ssid (%s) \n", request->ssids[i].ssid);
 
 			/* match_set ssids is a supert set of n_ssid list, so we need
 			 * not add these set seperately
@@ -5844,13 +5846,13 @@ int wl_cfg80211_sched_scan_start(struct wiphy *wiphy,
 	if (ssid_count) {
 		if ((ret = dhd_dev_pno_set(dev, ssids_local, request->n_match_sets,
 			pno_time, pno_repeat, pno_freq_expo_max)) < 0) {
-			WL_ERR(("PNO setup failed!! ret=%d \n", ret));
+			AP6210_ERR("PNO setup failed!! ret=%d \n", ret);
 			return -EINVAL;
 		}
 
 		/* Enable the PNO */
 		if (dhd_dev_pno_enable(dev, 1) < 0) {
-			WL_ERR(("PNO enable failed!! ret=%d \n", ret));
+			AP6210_ERR("PNO enable failed!! ret=%d \n", ret);
 			return -EINVAL;
 		}
 		wl->sched_scan_req = request;
@@ -5865,17 +5867,17 @@ int wl_cfg80211_sched_scan_stop(struct wiphy *wiphy, struct net_device *dev)
 {
 	struct wl_priv *wl = wiphy_priv(wiphy);
 
-	WL_DBG(("Enter \n"));
-	WL_PNO((">>> SCHED SCAN STOP\n"));
+	AP6210_DEBUG("Enter \n");
+	AP6210_DEBUG(">>> SCHED SCAN STOP\n");
 
 	if (dhd_dev_pno_enable(dev, 0) < 0)
-		WL_ERR(("PNO disable failed"));
+		AP6210_ERR("PNO disable failed");
 
 	if (dhd_dev_pno_reset(dev) < 0)
-		WL_ERR(("PNO reset failed"));
+		AP6210_ERR("PNO reset failed");
 
 	if (wl->scan_request && wl->sched_scan_running) {
-		WL_PNO((">>> Sched scan running. Aborting it..\n"));
+		AP6210_DEBUG(">>> Sched scan running. Aborting it..\n");
 		wl_notify_escan_complete(wl, dev, true, true);
 	}
 
@@ -5963,23 +5965,23 @@ wl_cfg80211_reg_notifier(
 	int ret = 0;
 
 	if (!request || !wl) {
-		WL_ERR(("Invalid arg\n"));
+		AP6210_ERR("Invalid arg\n");
 		return -EINVAL;
 	}
 
-	WL_DBG(("ccode: %c%c Initiator: %d\n",
-		request->alpha2[0], request->alpha2[1], request->initiator));
+	AP6210_DEBUG("ccode: %c%c Initiator: %d\n",
+		request->alpha2[0], request->alpha2[1], request->initiator);
 
 	/* We support only REGDOM_SET_BY_USER as of now */
 	if (request->initiator != NL80211_REGDOM_SET_BY_USER) {
-		WL_ERR(("reg_notifier for intiator:%d not supported \n",
-			request->initiator));
+		AP6210_ERR("reg_notifier for intiator:%d not supported \n",
+			request->initiator);
 		return -ENOTSUPP;
 	}
 
 	if (request->alpha2[0] == '0' && request->alpha2[1] == '0') {
 		/* world domain */
-		WL_ERR(("World domain. Setting XY/4 \n"));
+		AP6210_ERR("World domain. Setting XY/4 \n");
 		strncpy(cspec.country_abbrev, "XY", strlen("XY"));
 		cspec.rev = 4;
 	} else {
@@ -5990,17 +5992,17 @@ wl_cfg80211_reg_notifier(
 
 	if ((ret = wldev_iovar_setbuf(wl_to_prmry_ndev(wl), "country", (char *)&cspec,
 		sizeof(cspec), wl->ioctl_buf, WLC_IOCTL_SMLEN, NULL)) < 0) {
-		WL_ERR(("set country Failed :%d\n", ret));
+		AP6210_ERR("set country Failed :%d\n", ret);
 		goto exit;
 	}
 
 	if ((ret = wl_update_wiphybands(wl, false)) < 0) {
-		WL_ERR(("wl_update_wiphybands failed\n"));
+		AP6210_ERR("wl_update_wiphybands failed\n");
 		goto exit;
 	}
 
-	WL_DBG(("%s: set country '%s/%d' done\n",
-		__FUNCTION__, cspec.country_abbrev, cspec.rev));
+	AP6210_DEBUG("%s: set country '%s/%d' done\n",
+		__FUNCTION__, cspec.country_abbrev, cspec.rev);
 
 exit:
 	return ret;
@@ -6012,7 +6014,7 @@ static s32 wl_setup_wiphy(struct wireless_dev *wdev, struct device *sdiofunc_dev
 	wdev->wiphy =
 	    wiphy_new(&wl_cfg80211_ops, sizeof(struct wl_priv));
 	if (unlikely(!wdev->wiphy)) {
-		WL_ERR(("Couldn not allocate wiphy device\n"));
+		AP6210_ERR("Couldn not allocate wiphy device\n");
 		err = -ENOMEM;
 		return err;
 	}
@@ -6078,13 +6080,13 @@ static s32 wl_setup_wiphy(struct wireless_dev *wdev, struct device *sdiofunc_dev
 
 	wdev->wiphy->reg_notifier = wl_cfg80211_reg_notifier;
 
-	WL_DBG(("Registering custom regulatory)\n"));
+	AP6210_DEBUG("Registering custom regulatory)\n");
 	wdev->wiphy->flags |= WIPHY_FLAG_CUSTOM_REGULATORY;
 	wiphy_apply_custom_regulatory(wdev->wiphy, &brcm_regdom);
 	/* Now we can register wiphy with cfg80211 module */
 	err = wiphy_register(wdev->wiphy);
 	if (unlikely(err < 0)) {
-		WL_ERR(("Couldn not register wiphy device (%d)\n", err));
+		AP6210_ERR("Couldn not register wiphy device (%d)\n", err);
 		wiphy_free(wdev->wiphy);
 	}
 	return err;
@@ -6095,7 +6097,7 @@ static void wl_free_wdev(struct wl_priv *wl)
 	struct wireless_dev *wdev = wl->wdev;
 	struct wiphy *wiphy;
 	if (!wdev) {
-		WL_ERR(("wdev is invalid\n"));
+		AP6210_ERR("wdev is invalid\n");
 		return;
 	}
 	wiphy = wdev->wiphy;
@@ -6159,7 +6161,7 @@ static s32 wl_inform_bss(struct wl_priv *wl)
 	wl_reset_rssi_cache(&g_rssi_cache_ctrl);
 #endif
 
-	WL_SCAN(("scanned AP count (%d)\n", bss_list->count));
+	AP6210_DEBUG("scanned AP count (%d)\n", bss_list->count);
 	
 #if defined(BSSCACHE)
 	node = g_bss_cache_ctrl.m_cache_head;
@@ -6201,14 +6203,14 @@ static s32 wl_inform_single_bss(struct wl_priv *wl, struct wl_bss_info *bi, u8 i
 	u8 *ie_offset = NULL;
 
 	if (unlikely(dtoh32(bi->length) > WL_BSS_INFO_MAX)) {
-		WL_DBG(("Beacon is larger than buffer. Discarding\n"));
+		AP6210_DEBUG("Beacon is larger than buffer. Discarding\n");
 		return err;
 	}
 	aflags = (in_atomic()) ? GFP_ATOMIC : GFP_KERNEL;
 	notif_bss_info = kzalloc(sizeof(*notif_bss_info) + sizeof(*mgmt)
 		- sizeof(u8) + WL_BSS_INFO_MAX, aflags);
 	if (unlikely(!notif_bss_info)) {
-		WL_ERR(("notif_bss_info alloc failed\n"));
+		AP6210_ERR("notif_bss_info alloc failed\n");
 		return -ENOMEM;
 	}
 	mgmt = (struct ieee80211_mgmt *)notif_bss_info->frame_buf;
@@ -6220,7 +6222,7 @@ static s32 wl_inform_single_bss(struct wl_priv *wl, struct wl_bss_info *bi, u8 i
 	else
 		band = wiphy->bands[IEEE80211_BAND_5GHZ];
 	if (!band) {
-		WL_ERR(("No valid band"));
+		AP6210_ERR("No valid band");
 		kfree(notif_bss_info);
 		return -EINVAL;
 	}
@@ -6252,8 +6254,8 @@ static s32 wl_inform_single_bss(struct wl_priv *wl, struct wl_bss_info *bi, u8 i
 		u8 *ie_new_offset = NULL;
 		uint8 ie_new_length;
 
-		WL_ERR(("WAR trace: Changing the SSID Info, from beacon %d\n",
-			bi->flags & WL_BSS_FLAGS_FROM_BEACON));
+		AP6210_ERR("WAR trace: Changing the SSID Info, from beacon %d\n",
+			bi->flags & WL_BSS_FLAGS_FROM_BEACON);
 
 		ie_new_offset = (u8 *)kzalloc(WL_BSS_INFO_MAX, GFP_KERNEL);
 		if (ie_new_offset) {
@@ -6286,20 +6288,20 @@ static s32 wl_inform_single_bss(struct wl_priv *wl, struct wl_bss_info *bi, u8 i
 	freq = ieee80211_channel_to_frequency(notif_bss_info->channel, band->band);
 #endif
 	if (freq == 0) {
-		WL_ERR(("Invalid channel, fail to chcnage channel to freq\n"));
+		AP6210_ERR("Invalid channel, fail to chcnage channel to freq\n");
 		kfree(notif_bss_info);
 		return -EINVAL;
 	}
 	channel = ieee80211_get_channel(wiphy, freq);
 	if (unlikely(!channel)) {
-		WL_ERR(("ieee80211_get_channel error\n"));
+		AP6210_ERR("ieee80211_get_channel error\n");
 		kfree(notif_bss_info);
 		return -EINVAL;
 	}
-	WL_SCAN(("BSSID %pM, channel %d, rssi %d, capability 0x04%x, mgmt_type %d, "
+	AP6210_DEBUG("BSSID %pM, channel %d, rssi %d, capability 0x04%x, mgmt_type %d, "
 		"frame_len %d, SSID \"%s\"\n", &bi->BSSID, notif_bss_info->channel,
 		notif_bss_info->rssi, mgmt->u.beacon.capab_info, mgmt_type,
-		notif_bss_info->frame_len, bi->SSID));
+		notif_bss_info->frame_len, bi->SSID);
 
 	signal = notif_bss_info->rssi * 100;
 	if (!mgmt->u.probe_resp.timestamp) {
@@ -6319,7 +6321,7 @@ static s32 wl_inform_single_bss(struct wl_priv *wl, struct wl_bss_info *bi, u8 i
 	cbss = cfg80211_inform_bss_frame(wiphy, channel, mgmt,
 		le16_to_cpu(notif_bss_info->frame_len), signal, aflags);
 	if (unlikely(!cbss)) {
-		WL_ERR(("cfg80211_inform_bss_frame error\n"));
+		AP6210_ERR("cfg80211_inform_bss_frame error\n");
 		kfree(notif_bss_info);
 		return -EINVAL;
 	}
@@ -6335,7 +6337,7 @@ static bool wl_is_linkup(struct wl_priv *wl, const wl_event_msg_t *e, struct net
 	u32 status =  ntoh32(e->status);
 	u16 flags = ntoh16(e->flags);
 
-	WL_DBG(("event %d, status %d flags %x\n", event, status, flags));
+	AP6210_DEBUG("event %d, status %d flags %x\n", event, status, flags);
 	if (event == WLC_E_SET_SSID) {
 		if (status == WLC_E_STATUS_SUCCESS) {
 			if (!wl_is_ibssmode(wl, ndev))
@@ -6346,7 +6348,7 @@ static bool wl_is_linkup(struct wl_priv *wl, const wl_event_msg_t *e, struct net
 			return true;
 	}
 
-	WL_DBG(("wl_is_linkup false\n"));
+	AP6210_DEBUG("wl_is_linkup false\n");
 	return false;
 }
 
@@ -6360,13 +6362,13 @@ static bool wl_is_linkdown(struct wl_priv *wl, const wl_event_msg_t *e)
 	event == WLC_E_DISASSOC ||
 	event == WLC_E_DEAUTH) {
 #if (WL_DBG_LEVEL > 0)
-	WL_ERR(("Link down Reason : WLC_E_%s\n", wl_dbg_estr[event]));
+	AP6210_ERR("Link down Reason : WLC_E_%s\n", wl_dbg_estr[event]);
 #endif /* (WL_DBG_LEVEL > 0) */
 		return true;
 	} else if (event == WLC_E_LINK) {
 		if (!(flags & WLC_EVENT_MSG_LINK)) {
 #if (WL_DBG_LEVEL > 0)
-	WL_ERR(("Link down Reason : WLC_E_%s\n", wl_dbg_estr[event]));
+	AP6210_ERR("Link down Reason : WLC_E_%s\n", wl_dbg_estr[event]);
 #endif /* (WL_DBG_LEVEL > 0) */
 			return true;
 		}
@@ -6420,18 +6422,18 @@ wl_notify_connect_status_ap(struct wl_priv *wl, struct net_device *ndev,
 	struct station_info sinfo;
 #endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(3, 2, 0)) && !WL_CFG80211_STA_EVENT */
 
-	WL_DBG(("event %d status %d reason %d\n", event, ntoh32(e->status), reason));
+	AP6210_DEBUG("event %d status %d reason %d\n", event, ntoh32(e->status), reason);
 	/* if link down, bsscfg is disabled. */
 	if (event == WLC_E_LINK && reason == WLC_E_LINK_BSSCFG_DIS &&
 		wl_get_p2p_status(wl, IF_DELETING) && (ndev != wl_to_prmry_ndev(wl))) {
 		wl_add_remove_eventmsg(ndev, WLC_E_PROBREQ_MSG, false);
-		WL_INFO(("AP mode link down !! \n"));
+		AP6210_DEBUG("AP mode link down !! \n");
 		complete(&wl->iface_disable);
 		return 0;
 	}
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 2, 0)) && !defined(WL_CFG80211_STA_EVENT)
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	if (!len && (event == WLC_E_DEAUTH)) {
 		len = 2; /* reason code field */
 		data = &reason;
@@ -6440,12 +6442,12 @@ wl_notify_connect_status_ap(struct wl_priv *wl, struct net_device *ndev,
 		body = kzalloc(len, GFP_KERNEL);
 
 		if (body == NULL) {
-			WL_ERR(("wl_notify_connect_status: Failed to allocate body\n"));
+			AP6210_ERR("wl_notify_connect_status: Failed to allocate body\n");
 			return WL_INVALID;
 		}
 	}
 	memset(&bssid, 0, ETHER_ADDR_LEN);
-	WL_DBG(("Enter event %d ndev %p\n", event, ndev));
+	AP6210_DEBUG("Enter event %d ndev %p\n", event, ndev);
 	if (wl_get_mode_by_netdev(wl, ndev) == WL_INVALID) {
 		kfree(body);
 		return WL_INVALID;
@@ -6488,7 +6490,7 @@ wl_notify_connect_status_ap(struct wl_priv *wl, struct net_device *ndev,
 	else
 		band = wiphy->bands[IEEE80211_BAND_5GHZ];
 	if (!band) {
-		WL_ERR(("No valid band"));
+		AP6210_ERR("No valid band");
 		if (body)
 			kfree(body);
 		return -EINVAL;
@@ -6538,7 +6540,7 @@ exit:
 		reason == DOT11_SC_SUCCESS) {
 		sinfo.filled = STATION_INFO_ASSOC_REQ_IES;
 		if (!data) {
-			WL_ERR(("No IEs present in ASSOC/REASSOC_IND"));
+			AP6210_ERR("No IEs present in ASSOC/REASSOC_IND");
 			return -EINVAL;
 		}
 		sinfo.assoc_req_ies = data;
@@ -6560,7 +6562,7 @@ wl_get_auth_assoc_status(struct wl_priv *wl, struct net_device *ndev,
 	u32 reason = ntoh32(e->reason);
 	u32 event = ntoh32(e->event_type);
 	struct wl_security *sec = wl_read_prof(wl, ndev, WL_PROF_SEC);
-	WL_DBG(("event type : %d, reason : %d\n", event, reason));
+	AP6210_DEBUG("event type : %d, reason : %d\n", event, reason);
 	if (sec) {
 		switch (event) {
 		case WLC_E_ASSOC:
@@ -6570,7 +6572,7 @@ wl_get_auth_assoc_status(struct wl_priv *wl, struct net_device *ndev,
 			break;
 		}
 	} else
-		WL_ERR(("sec is NULL\n"));
+		AP6210_ERR("sec is NULL\n");
 	return 0;
 }
 
@@ -6585,8 +6587,8 @@ wl_notify_connect_status(struct wl_priv *wl, struct net_device *ndev,
 	if (wl_get_mode_by_netdev(wl, ndev) == WL_MODE_AP) {
 		wl_notify_connect_status_ap(wl, ndev, e, data);
 	} else {
-		WL_DBG(("wl_notify_connect_status : event %d status : %d ndev %p\n",
-			ntoh32(e->event_type), ntoh32(e->status), ndev));
+		AP6210_DEBUG("wl_notify_connect_status : event %d status : %d ndev %p\n",
+			ntoh32(e->event_type), ntoh32(e->status), ndev);
 		if (event == WLC_E_ASSOC || event == WLC_E_AUTH) {
 			wl_get_auth_assoc_status(wl, ndev, e);
 			return err;
@@ -6595,18 +6597,18 @@ wl_notify_connect_status(struct wl_priv *wl, struct net_device *ndev,
 			wl_link_up(wl);
 			act = true;
 			if (wl_is_ibssmode(wl, ndev)) {
-				printk("cfg80211_ibss_joined\n");
+				AP6210_DEBUG("cfg80211_ibss_joined\n");
 				cfg80211_ibss_joined(ndev, (s8 *)&e->addr,
 					GFP_KERNEL);
-				WL_DBG(("joined in IBSS network\n"));
+				AP6210_DEBUG("joined in IBSS network\n");
 			} else {
 				if (!wl_get_drv_status(wl, DISCONNECTING, ndev)) {
-					printk("wl_bss_connect_done succeeded with " MACDBG "\n",
+					AP6210_DEBUG("wl_bss_connect_done succeeded with " MACDBG "\n",
 						MAC2STRDBG((u8*)(&e->addr)));
 					wl_bss_connect_done(wl, ndev, e, data, true);
-					WL_DBG(("joined in BSS network \"%s\"\n",
+					AP6210_DEBUG("joined in BSS network \"%s\"\n",
 					((struct wlc_ssid *)
-					 wl_read_prof(wl, ndev, WL_PROF_SSID))->SSID));
+					 wl_read_prof(wl, ndev, WL_PROF_SSID))->SSID);
 				}
 			}
 			wl_update_prof(wl, ndev, e, &act, WL_PROF_ACT);
@@ -6630,14 +6632,14 @@ wl_notify_connect_status(struct wl_priv *wl, struct net_device *ndev,
 				/* WLAN_REASON_UNSPECIFIED is used for hang up event in Android */
 				reason = (reason == WLAN_REASON_UNSPECIFIED)? 0 : reason;
 
-				printk("link down if %s may call cfg80211_disconnected. "
+				AP6210_DEBUG("link down if %s may call cfg80211_disconnected. "
 					"event : %d, reason=%d from " MACDBG "\n",
 					ndev->name, event, ntoh32(e->reason),
 					MAC2STRDBG((u8*)(&e->addr)));
 				if (memcmp(curbssid, &e->addr, ETHER_ADDR_LEN) != 0) {
-					WL_ERR(("BSSID of event is not the connected BSSID"
+					AP6210_ERR("BSSID of event is not the connected BSSID"
 						"(ignore it) cur: " MACDBG " event: " MACDBG"\n",
-						MAC2STRDBG(curbssid), MAC2STRDBG((u8*)(&e->addr))));
+						MAC2STRDBG(curbssid), MAC2STRDBG((u8*)(&e->addr)));
 					return 0;
 				}
 				wl_clr_drv_status(wl, CONNECTED, ndev);
@@ -6652,7 +6654,7 @@ wl_notify_connect_status(struct wl_priv *wl, struct net_device *ndev,
 					err = wldev_ioctl(ndev, WLC_DISASSOC, &scbval,
 						sizeof(scb_val_t), true);
 					if (err < 0) {
-						WL_ERR(("WLC_DISASSOC error %d\n", err));
+						AP6210_ERR("WLC_DISASSOC error %d\n", err);
 						err = 0;
 					}
 					cfg80211_disconnected(ndev, reason, NULL, 0, GFP_KERNEL);
@@ -6661,7 +6663,7 @@ wl_notify_connect_status(struct wl_priv *wl, struct net_device *ndev,
 				}
 			}
 			else if (wl_get_drv_status(wl, CONNECTING, ndev)) {
-				printk("link down, during connecting\n");
+				AP6210_DEBUG("link down, during connecting\n");
 #ifdef ESCAN_RESULT_PATCH
 				if ((memcmp(connect_req_bssid, broad_bssid, ETHER_ADDR_LEN) == 0) ||
 					(memcmp(&e->addr, broad_bssid, ETHER_ADDR_LEN) == 0) ||
@@ -6677,7 +6679,7 @@ wl_notify_connect_status(struct wl_priv *wl, struct net_device *ndev,
 				complete(&wl->iface_disable);
 
 		} else if (wl_is_nonetwork(wl, e)) {
-			printk("connect failed event=%d e->status %d e->reason %d \n",
+			AP6210_DEBUG("connect failed event=%d e->status %d e->reason %d \n",
 				event, (int)ntoh32(e->status), (int)ntoh32(e->reason));
 			/* Clean up any pending scan request */
 			if (wl->scan_request) {
@@ -6691,7 +6693,7 @@ wl_notify_connect_status(struct wl_priv *wl, struct net_device *ndev,
 			if (wl_get_drv_status(wl, CONNECTING, ndev))
 				wl_bss_connect_done(wl, ndev, e, data, false);
 		} else {
-			printk("%s nothing\n", __FUNCTION__);
+			AP6210_DEBUG("%s nothing\n", __FUNCTION__);
 		}
 	}
 	return err;
@@ -6705,7 +6707,7 @@ wl_notify_roaming_status(struct wl_priv *wl, struct net_device *ndev,
 	s32 err = 0;
 	u32 event = be32_to_cpu(e->event_type);
 	u32 status = be32_to_cpu(e->status);
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	if (event == WLC_E_ROAM && status == WLC_E_STATUS_SUCCESS) {
 		if (wl_get_drv_status(wl, CONNECTED, ndev))
 			wl_bss_roaming_done(wl, ndev, e, data);
@@ -6724,11 +6726,11 @@ static s32 wl_get_assoc_ies(struct wl_priv *wl, struct net_device *ndev)
 	struct wl_connect_info *conn_info = wl_to_conn(wl);
 	s32 err = 0;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	err = wldev_iovar_getbuf(ndev, "assoc_info", NULL, 0, wl->extra_buf,
 		WL_ASSOC_INFO_MAX, NULL);
 	if (unlikely(err)) {
-		WL_ERR(("could not get assoc info (%d)\n", err));
+		AP6210_ERR("could not get assoc info (%d)\n", err);
 		return err;
 	}
 	memcpy(&assoc_info, wl->extra_buf, sizeof(wl_assoc_info_t));
@@ -6747,7 +6749,7 @@ static s32 wl_get_assoc_ies(struct wl_priv *wl, struct net_device *ndev)
 		err = wldev_iovar_getbuf(ndev, "assoc_req_ies", NULL, 0, wl->extra_buf,
 			WL_ASSOC_INFO_MAX, NULL);
 		if (unlikely(err)) {
-			WL_ERR(("could not get assoc req (%d)\n", err));
+			AP6210_ERR("could not get assoc req (%d)\n", err);
 			return err;
 		}
 		conn_info->req_ie_len = assoc_info.req_len - sizeof(struct dot11_assoc_req);
@@ -6757,8 +6759,8 @@ static s32 wl_get_assoc_ies(struct wl_priv *wl, struct net_device *ndev)
 		if (conn_info->req_ie_len <= MAX_REQ_LINE)
 			memcpy(conn_info->req_ie, wl->extra_buf, conn_info->req_ie_len);
 		else {
-			WL_ERR(("%s IE size %d above max %d size \n",
-				__FUNCTION__, conn_info->req_ie_len, MAX_REQ_LINE));
+			AP6210_ERR("%s IE size %d above max %d size \n",
+				__FUNCTION__, conn_info->req_ie_len, MAX_REQ_LINE);
 			return err;
 		}
 	} else {
@@ -6768,22 +6770,22 @@ static s32 wl_get_assoc_ies(struct wl_priv *wl, struct net_device *ndev)
 		err = wldev_iovar_getbuf(ndev, "assoc_resp_ies", NULL, 0, wl->extra_buf,
 			WL_ASSOC_INFO_MAX, NULL);
 		if (unlikely(err)) {
-			WL_ERR(("could not get assoc resp (%d)\n", err));
+			AP6210_ERR("could not get assoc resp (%d)\n", err);
 			return err;
 		}
 		conn_info->resp_ie_len = assoc_info.resp_len -sizeof(struct dot11_assoc_resp);
 		if (conn_info->resp_ie_len <= MAX_REQ_LINE)
 			memcpy(conn_info->resp_ie, wl->extra_buf, conn_info->resp_ie_len);
 		else {
-			WL_ERR(("%s IE size %d above max %d size \n",
-				__FUNCTION__, conn_info->resp_ie_len, MAX_REQ_LINE));
+			AP6210_ERR("%s IE size %d above max %d size \n",
+				__FUNCTION__, conn_info->resp_ie_len, MAX_REQ_LINE);
 			return err;
 		}
 	} else {
 		conn_info->resp_ie_len = 0;
 	}
-	WL_DBG(("req len (%d) resp len (%d)\n", conn_info->req_ie_len,
-		conn_info->resp_ie_len));
+	AP6210_DEBUG("req len (%d) resp len (%d)\n", conn_info->req_ie_len,
+		conn_info->resp_ie_len);
 
 	return err;
 }
@@ -6814,9 +6816,9 @@ static void wl_ch_to_chanspec(int ch, struct wl_join_params *join_params,
 
 		join_params->params.chanspec_num =
 			htod32(join_params->params.chanspec_num);
-		WL_DBG(("join_params->params.chanspec_list[0]= %X, %d channels\n",
+		AP6210_DEBUG("join_params->params.chanspec_list[0]= %X, %d channels\n",
 			join_params->params.chanspec_list[0],
-			join_params->params.chanspec_num));
+			join_params->params.chanspec_num);
 	}
 }
 
@@ -6848,12 +6850,12 @@ static s32 wl_update_bss_info(struct wl_priv *wl, struct net_device *ndev, u8 is
 
 	mutex_lock(&wl->usr_sync);
 	if (!bss) {
-		WL_DBG(("Could not find the AP\n"));
+		AP6210_DEBUG("Could not find the AP\n");
 		*(u32 *) wl->extra_buf = htod32(WL_EXTRA_BUF_MAX);
 		err = wldev_ioctl(ndev, WLC_GET_BSS_INFO,
 			wl->extra_buf, WL_EXTRA_BUF_MAX, false);
 		if (unlikely(err)) {
-			WL_ERR(("Could not get bss info %d\n", err));
+			AP6210_ERR("Could not get bss info %d\n", err);
 			goto update_bss_info_out;
 		}
 		bi = (struct wl_bss_info *)(wl->extra_buf + 4);
@@ -6876,7 +6878,7 @@ static s32 wl_update_bss_info(struct wl_priv *wl, struct net_device *ndev, u8 is
 		ie_len = bi->ie_length;
 		beacon_interval = cpu_to_le16(bi->beacon_period);
 	} else {
-		WL_DBG(("Found the AP in the list - BSSID %pM\n", bss->bssid));
+		AP6210_DEBUG("Found the AP in the list - BSSID %pM\n", bss->bssid);
 		ie = bss->information_elements;
 		ie_len = bss->len_information_elements;
 		beacon_interval = bss->beacon_interval;
@@ -6895,7 +6897,7 @@ static s32 wl_update_bss_info(struct wl_priv *wl, struct net_device *ndev, u8 is
 		err = wldev_ioctl(ndev, WLC_GET_DTIMPRD,
 			&dtim_period, sizeof(dtim_period), false);
 		if (unlikely(err)) {
-			WL_ERR(("WLC_GET_DTIMPRD error (%d)\n", err));
+			AP6210_ERR("WLC_GET_DTIMPRD error (%d)\n", err);
 			goto update_bss_info_out;
 		}
 	}
@@ -6921,7 +6923,7 @@ wl_bss_roaming_done(struct wl_priv *wl, struct net_device *ndev,
 	curbssid = wl_read_prof(wl, ndev, WL_PROF_BSSID);
 	wl_update_bss_info(wl, ndev, 1);
 	wl_update_pmklist(ndev, wl->pmk_list, err);
-	printk("wl_bss_roaming_done succeeded to " MACDBG "\n",
+	AP6210_DEBUG("wl_bss_roaming_done succeeded to " MACDBG "\n",
 		MAC2STRDBG((u8*)(&e->addr)));
 
 	cfg80211_roamed(ndev,
@@ -6934,7 +6936,7 @@ wl_bss_roaming_done(struct wl_priv *wl, struct net_device *ndev,
 		curbssid,
 		conn_info->req_ie, conn_info->req_ie_len,
 		conn_info->resp_ie, conn_info->resp_ie_len, GFP_KERNEL);
-	WL_DBG(("Report roaming result\n"));
+	AP6210_DEBUG("Report roaming result\n");
 
 	wl_set_drv_status(wl, CONNECTED, ndev);
 
@@ -6950,21 +6952,21 @@ wl_bss_connect_done(struct wl_priv *wl, struct net_device *ndev,
 	s32 err = 0;
 	u8 *curbssid = wl_read_prof(wl, ndev, WL_PROF_BSSID);
 	if (!sec) {
-		WL_ERR(("sec is NULL\n"));
+		AP6210_ERR("sec is NULL\n");
 		return -ENODEV;
 	}
-	WL_DBG((" enter\n"));
+	AP6210_DEBUG(" enter\n");
 #ifdef ESCAN_RESULT_PATCH
 	if (wl_get_drv_status(wl, CONNECTED, ndev)) {
 		if (memcmp(curbssid, connect_req_bssid, ETHER_ADDR_LEN) == 0) {
-			WL_DBG((" Connected event of connected device e=%d s=%d, ignore it\n",
-				ntoh32(e->event_type), ntoh32(e->status)));
+			AP6210_DEBUG(" Connected event of connected device e=%d s=%d, ignore it\n",
+				ntoh32(e->event_type), ntoh32(e->status));
 			return err;
 		}
 	}
 	if (memcmp(curbssid, broad_bssid, ETHER_ADDR_LEN) == 0 &&
 		memcmp(broad_bssid, connect_req_bssid, ETHER_ADDR_LEN) != 0) {
-		WL_DBG(("copy bssid\n"));
+		AP6210_DEBUG("copy bssid\n");
 		memcpy(curbssid, connect_req_bssid, ETHER_ADDR_LEN);
 	}
 
@@ -6995,9 +6997,9 @@ wl_bss_connect_done(struct wl_priv *wl, struct net_device *ndev,
 			WLAN_STATUS_UNSPECIFIED_FAILURE,
 			GFP_KERNEL);
 		if (completed)
-			WL_INFO(("Report connect result - connection succeeded\n"));
+			AP6210_DEBUG("Report connect result - connection succeeded\n");
 		else
-			WL_ERR(("Report connect result - connection failed\n"));
+			AP6210_ERR("Report connect result - connection failed\n");
 	}
 	return err;
 }
@@ -7027,7 +7029,7 @@ static s32
 wl_notify_pfn_status(struct wl_priv *wl, struct net_device *ndev,
 	const wl_event_msg_t *e, void *data)
 {
-	WL_ERR((">>> PNO Event\n"));
+	AP6210_ERR(">>> PNO Event\n");
 
 #ifndef WL_SCHED_SCAN
 	mutex_lock(&wl->usr_sync);
@@ -7054,9 +7056,9 @@ wl_notify_scan_status(struct wl_priv *wl, struct net_device *ndev,
 	s32 err = 0;
 	unsigned long flags;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	if (!wl_get_drv_status(wl, SCANNING, ndev)) {
-		WL_ERR(("scan is not ready \n"));
+		AP6210_ERR("scan is not ready \n");
 		return err;
 	}
 	if (wl->iscan_on && wl->iscan_kickstart)
@@ -7067,14 +7069,14 @@ wl_notify_scan_status(struct wl_priv *wl, struct net_device *ndev,
 	err = wldev_ioctl(ndev, WLC_GET_CHANNEL, &channel_inform,
 		sizeof(channel_inform), false);
 	if (unlikely(err)) {
-		WL_ERR(("scan busy (%d)\n", err));
+		AP6210_ERR("scan busy (%d)\n", err);
 		goto scan_done_out;
 	}
 	channel_inform.scan_channel = dtoh32(channel_inform.scan_channel);
 	if (unlikely(channel_inform.scan_channel)) {
 
-		WL_DBG(("channel_inform.scan_channel (%d)\n",
-			channel_inform.scan_channel));
+		AP6210_DEBUG("channel_inform.scan_channel (%d)\n",
+			channel_inform.scan_channel);
 	}
 	wl->bss_list = wl->scan_results;
 	bss_list = wl->bss_list;
@@ -7082,7 +7084,7 @@ wl_notify_scan_status(struct wl_priv *wl, struct net_device *ndev,
 	bss_list->buflen = htod32(len);
 	err = wldev_ioctl(ndev, WLC_SCAN_RESULTS, bss_list, len, false);
 	if (unlikely(err) && unlikely(!wl->scan_suppressed)) {
-		WL_ERR(("%s Scan_results error (%d)\n", ndev->name, err));
+		AP6210_ERR("%s Scan_results error (%d)\n", ndev->name, err);
 		err = -EINVAL;
 		goto scan_done_out;
 	}
@@ -7100,7 +7102,7 @@ scan_done_out:
 		wl->scan_request = NULL;
 	}
 	spin_unlock_irqrestore(&wl->cfgdrv_lock, flags);
-	WL_DBG(("cfg80211_scan_done\n"));
+	AP6210_DEBUG("cfg80211_scan_done\n");
 	mutex_unlock(&wl->usr_sync);
 	return err;
 }
@@ -7130,7 +7132,7 @@ wl_frame_get_mgmt(u16 fc, const struct ether_addr *da,
 	totlen += DOT11_MGMT_HDR_LEN + prebody_len;
 	*pheader = kzalloc(totlen, GFP_KERNEL);
 	if (*pheader == NULL) {
-		WL_ERR(("memory alloc failed \n"));
+		AP6210_ERR("memory alloc failed \n");
 		return -ENOMEM;
 	}
 	hdr = (struct dot11_management_header *) (*pheader);
@@ -7154,7 +7156,7 @@ wl_stop_wait_next_action_frame(struct wl_priv *wl, struct net_device *ndev)
 	if (wl_get_drv_status_all(wl, SENDING_ACT_FRM) &&
 		(wl_get_p2p_status(wl, ACTION_TX_COMPLETED) ||
 		wl_get_p2p_status(wl, ACTION_TX_NOACK))) {
-		WL_DBG(("*** Wake UP ** abort actframe iovar\n"));
+		AP6210_DEBUG("*** Wake UP ** abort actframe iovar\n");
 		/* if channel is not zero, "actfame" uses off channel scan.
 		 * So abort scan for off channel completion.
 		 */
@@ -7165,7 +7167,7 @@ wl_stop_wait_next_action_frame(struct wl_priv *wl, struct net_device *ndev)
 	}
 #ifdef WL_CFG80211_SYNC_GON
 	else if (wl_get_drv_status_all(wl, WAITING_NEXT_ACT_FRM_LISTEN)) {
-		WL_DBG(("*** Wake UP ** abort listen for next af frame\n"));
+		AP6210_DEBUG("*** Wake UP ** abort listen for next af frame\n");
 		/* So abort scan to cancel listen */
 		wl_notify_escan_complete(wl,
 			(ndev == wl->p2p_net) ? wl_to_prmry_ndev(wl) : ndev, true, true);
@@ -7209,7 +7211,7 @@ wl_notify_rx_mgmt_frame(struct wl_priv *wl, struct net_device *ndev,
 	else
 		band = wiphy->bands[IEEE80211_BAND_5GHZ];
 	if (!band) {
-		WL_ERR(("No valid band"));
+		AP6210_ERR("No valid band");
 		return -EINVAL;
 	}
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 38) && !defined(WL_COMPAT_WIRELESS)
@@ -7224,14 +7226,14 @@ wl_notify_rx_mgmt_frame(struct wl_priv *wl, struct net_device *ndev,
 
 		err = wldev_ioctl(dev, WLC_GET_BSSID, &bssid, ETHER_ADDR_LEN, false);
 		if (err < 0)
-			 WL_ERR(("WLC_GET_BSSID error %d\n", err));
+			 AP6210_ERR("WLC_GET_BSSID error %d\n", err);
 		memcpy(da.octet, wl->ioctl_buf, ETHER_ADDR_LEN);
 		err = wl_frame_get_mgmt(FC_ACTION, &da, &e->addr, &bssid,
 			&mgmt_frame, &mgmt_frame_len,
 			(u8 *)((wl_event_rx_frame_data_t *)rxframe + 1));
 		if (err < 0) {
-			WL_ERR(("%s: Error in receiving action frame len %d channel %d freq %d\n",
-				__func__, mgmt_frame_len, channel, freq));
+			AP6210_ERR("%s: Error in receiving action frame len %d channel %d freq %d\n",
+				__func__, mgmt_frame_len, channel, freq);
 			goto exit;
 		}
 		isfree = true;
@@ -7250,8 +7252,8 @@ wl_notify_rx_mgmt_frame(struct wl_priv *wl, struct net_device *ndev,
 					(&mgmt_frame[DOT11_MGMT_HDR_LEN]);
 			if (sd_act_frm && wl_get_drv_status_all(wl, WAITING_NEXT_ACT_FRM)) {
 				if (wl->next_af_subtype == sd_act_frm->action) {
-					WL_DBG(("We got a right next frame of SD!(%d)\n",
-						sd_act_frm->action));
+					AP6210_DEBUG("We got a right next frame of SD!(%d)\n",
+						sd_act_frm->action);
 					wl_clr_drv_status(wl, WAITING_NEXT_ACT_FRM,
 						(ndev == wl->p2p_net) ?
 						wl_to_prmry_ndev(wl) : ndev);
@@ -7274,8 +7276,8 @@ wl_notify_rx_mgmt_frame(struct wl_priv *wl, struct net_device *ndev,
 
 			if (wl_get_drv_status_all(wl, WAITING_NEXT_ACT_FRM)) {
 				if (wl->next_af_subtype == act_frm->subtype) {
-					WL_DBG(("We got a right next frame!(%d)\n",
-						act_frm->subtype));
+					AP6210_DEBUG("We got a right next frame!(%d)\n",
+						act_frm->subtype);
 					wl_clr_drv_status(wl, WAITING_NEXT_ACT_FRM,
 						(ndev == wl->p2p_net) ?
 						wl_to_prmry_ndev(wl) : ndev);
@@ -7296,7 +7298,7 @@ wl_notify_rx_mgmt_frame(struct wl_priv *wl, struct net_device *ndev,
 			wldev_iovar_setint(dev, "mpc", 1);
 		}
 		if (act_frm && (act_frm->subtype == P2P_PAF_GON_CONF)) {
-			WL_DBG(("P2P: GO_NEG_PHASE status cleared \n"));
+			AP6210_DEBUG("P2P: GO_NEG_PHASE status cleared \n");
 			wl_clr_p2p_status(wl, GO_NEG_PHASE);
 		}
 	} else {
@@ -7308,8 +7310,8 @@ wl_notify_rx_mgmt_frame(struct wl_priv *wl, struct net_device *ndev,
 		 * do not send probe request event during sending action frame.
 		 */
 		if (event == WLC_E_P2P_PROBREQ_MSG) {
-			WL_DBG((" Event %s\n", (event == WLC_E_P2P_PROBREQ_MSG) ?
-				"WLC_E_P2P_PROBREQ_MSG":"WLC_E_PROBREQ_MSG"));
+			AP6210_DEBUG(" Event %s\n", (event == WLC_E_P2P_PROBREQ_MSG) ?
+				"WLC_E_P2P_PROBREQ_MSG":"WLC_E_PROBREQ_MSG");
 
 
 			/* Filter any P2P probe reqs arriving during the
@@ -7317,8 +7319,8 @@ wl_notify_rx_mgmt_frame(struct wl_priv *wl, struct net_device *ndev,
 			 */
 			if (wl->p2p &&
 				wl_get_p2p_status(wl, GO_NEG_PHASE)) {
-				WL_DBG(("Filtering P2P probe_req while "
-					"being in GO-Neg state\n"));
+				AP6210_DEBUG("Filtering P2P probe_req while "
+					"being in GO-Neg state\n");
 				return 0;
 			}
 		}
@@ -7330,8 +7332,8 @@ wl_notify_rx_mgmt_frame(struct wl_priv *wl, struct net_device *ndev,
 	cfg80211_rx_mgmt(ndev, freq, mgmt_frame, mgmt_frame_len, GFP_ATOMIC);
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 4, 0) */
 
-	WL_DBG(("%s: mgmt_frame_len (%d) , e->datalen (%d), channel (%d), freq (%d)\n", __func__,
-		mgmt_frame_len, ntoh32(e->datalen), channel, freq));
+	AP6210_DEBUG("%s: mgmt_frame_len (%d) , e->datalen (%d), channel (%d), freq (%d)\n", __func__,
+		mgmt_frame_len, ntoh32(e->datalen), channel, freq);
 exit:
 	if (isfree)
 		kfree(mgmt_frame);
@@ -7357,13 +7359,13 @@ wl_notify_sched_scan_results(struct wl_priv *wl, struct net_device *ndev,
 	int band = 0;
 	struct wl_pfn_scanresults *pfn_result = (struct wl_pfn_scanresults *)data;
 
-	WL_DBG(("Enter\n"));
+	AP6210_DEBUG("Enter\n");
 
 	if (e->event_type == WLC_E_PFN_NET_LOST) {
-		WL_PNO(("PFN NET LOST event. Do Nothing \n"));
+		AP6210_DEBUG("PFN NET LOST event. Do Nothing \n");
 		return 0;
 	}
-	WL_PNO((">>> PFN NET FOUND event. count:%d \n", pfn_result->count));
+	AP6210_DEBUG(">>> PFN NET FOUND event. count:%d \n", pfn_result->count);
 	if (pfn_result->count > 0) {
 		int i;
 
@@ -7377,7 +7379,7 @@ wl_notify_sched_scan_results(struct wl_priv *wl, struct net_device *ndev,
 			(sizeof(struct ieee80211_channel) * MAX_PFN_LIST_COUNT),
 			GFP_KERNEL);
 		if (!channel) {
-			WL_ERR(("No memory"));
+			AP6210_ERR("No memory");
 			err = -ENOMEM;
 			goto out_err;
 		}
@@ -7385,12 +7387,12 @@ wl_notify_sched_scan_results(struct wl_priv *wl, struct net_device *ndev,
 		for (i = 0; i < pfn_result->count; i++) {
 			netinfo = &pnetinfo[i];
 			if (!netinfo) {
-				WL_ERR(("Invalid netinfo ptr. index:%d", i));
+				AP6210_ERR("Invalid netinfo ptr. index:%d", i);
 				err = -EINVAL;
 				goto out_err;
 			}
-			WL_PNO((">>> SSID:%s Channel:%d \n",
-				netinfo->pfnsubnet.SSID, netinfo->pfnsubnet.channel));
+			AP6210_DEBUG(">>> SSID:%s Channel:%d \n",
+				netinfo->pfnsubnet.SSID, netinfo->pfnsubnet.channel);
 			/* PFN result doesn't have all the info which are required by the supplicant
 			 * (For e.g IEs) Do a target Escan so that sched scan results are reported
 			 * via wl_inform_single_bss in the required format. Escan does require the
@@ -7422,7 +7424,7 @@ wl_notify_sched_scan_results(struct wl_priv *wl, struct net_device *ndev,
 		}
 
 		if (wl_get_p2p_status(wl, DISCOVERY_ON)) {
-			WL_PNO((">>> P2P discovery was ON. Disabling it\n"));
+			AP6210_DEBUG(">>> P2P discovery was ON. Disabling it\n");
 			err = wl_cfgp2p_discover_enable_search(wl, false);
 			if (unlikely(err)) {
 				wl_clr_drv_status(wl, SCANNING, ndev);
@@ -7432,10 +7434,10 @@ wl_notify_sched_scan_results(struct wl_priv *wl, struct net_device *ndev,
 
 		wl_set_drv_status(wl, SCANNING, ndev);
 #if FULL_ESCAN_ON_PFN_NET_FOUND
-		WL_PNO((">>> Doing Full ESCAN on PNO event\n"));
+		AP6210_DEBUG(">>> Doing Full ESCAN on PNO event\n");
 		err = wl_do_escan(wl, wiphy, ndev, NULL);
 #else
-		WL_PNO((">>> Doing targeted ESCAN on PNO event\n"));
+		AP6210_DEBUG(">>> Doing targeted ESCAN on PNO event\n");
 		err = wl_do_escan(wl, wiphy, ndev, &request);
 #endif
 		if (err) {
@@ -7445,7 +7447,7 @@ wl_notify_sched_scan_results(struct wl_priv *wl, struct net_device *ndev,
 		wl->sched_scan_running = TRUE;
 	}
 	else {
-		WL_ERR(("FALSE PNO Event. (pfn_count == 0) \n"));
+		AP6210_ERR("FALSE PNO Event. (pfn_count == 0) \n");
 	}
 out_err:
 	if (channel)
@@ -7456,7 +7458,7 @@ out_err:
 
 static void wl_init_conf(struct wl_conf *conf)
 {
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	conf->frag_threshold = (u32)-1;
 	conf->rts_threshold = (u32)-1;
 	conf->retry_short = (u32)-1;
@@ -7503,63 +7505,63 @@ static void wl_init_event_handler(struct wl_priv *wl)
 
 static s32 wl_init_priv_mem(struct wl_priv *wl)
 {
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	wl->scan_results = (void *)kzalloc(WL_SCAN_BUF_MAX, GFP_KERNEL);
 	if (unlikely(!wl->scan_results)) {
-		WL_ERR(("Scan results alloc failed\n"));
+		AP6210_ERR("Scan results alloc failed\n");
 		goto init_priv_mem_out;
 	}
 	wl->conf = (void *)kzalloc(sizeof(*wl->conf), GFP_KERNEL);
 	if (unlikely(!wl->conf)) {
-		WL_ERR(("wl_conf alloc failed\n"));
+		AP6210_ERR("wl_conf alloc failed\n");
 		goto init_priv_mem_out;
 	}
 	wl->scan_req_int =
 	    (void *)kzalloc(sizeof(*wl->scan_req_int), GFP_KERNEL);
 	if (unlikely(!wl->scan_req_int)) {
-		WL_ERR(("Scan req alloc failed\n"));
+		AP6210_ERR("Scan req alloc failed\n");
 		goto init_priv_mem_out;
 	}
 	wl->ioctl_buf = (void *)kzalloc(WLC_IOCTL_MAXLEN, GFP_KERNEL);
 	if (unlikely(!wl->ioctl_buf)) {
-		WL_ERR(("Ioctl buf alloc failed\n"));
+		AP6210_ERR("Ioctl buf alloc failed\n");
 		goto init_priv_mem_out;
 	}
 	wl->escan_ioctl_buf = (void *)kzalloc(WLC_IOCTL_MAXLEN, GFP_KERNEL);
 	if (unlikely(!wl->escan_ioctl_buf)) {
-		WL_ERR(("Ioctl buf alloc failed\n"));
+		AP6210_ERR("Ioctl buf alloc failed\n");
 		goto init_priv_mem_out;
 	}
 	wl->extra_buf = (void *)kzalloc(WL_EXTRA_BUF_MAX, GFP_KERNEL);
 	if (unlikely(!wl->extra_buf)) {
-		WL_ERR(("Extra buf alloc failed\n"));
+		AP6210_ERR("Extra buf alloc failed\n");
 		goto init_priv_mem_out;
 	}
 	wl->iscan = (void *)kzalloc(sizeof(*wl->iscan), GFP_KERNEL);
 	if (unlikely(!wl->iscan)) {
-		WL_ERR(("Iscan buf alloc failed\n"));
+		AP6210_ERR("Iscan buf alloc failed\n");
 		goto init_priv_mem_out;
 	}
 	wl->pmk_list = (void *)kzalloc(sizeof(*wl->pmk_list), GFP_KERNEL);
 	if (unlikely(!wl->pmk_list)) {
-		WL_ERR(("pmk list alloc failed\n"));
+		AP6210_ERR("pmk list alloc failed\n");
 		goto init_priv_mem_out;
 	}
 	wl->sta_info = (void *)kzalloc(sizeof(*wl->sta_info), GFP_KERNEL);
 	if (unlikely(!wl->sta_info)) {
-		WL_ERR(("sta info  alloc failed\n"));
+		AP6210_ERR("sta info  alloc failed\n");
 		goto init_priv_mem_out;
 	}
 
 #if defined(STATIC_WL_PRIV_STRUCT)
 	wl->conn_info = (void *)kzalloc(sizeof(*wl->conn_info), GFP_KERNEL);
 	if (unlikely(!wl->conn_info)) {
-		WL_ERR(("wl->conn_info  alloc failed\n"));
+		AP6210_ERR("wl->conn_info  alloc failed\n");
 		goto init_priv_mem_out;
 	}
 	wl->ie = (void *)kzalloc(sizeof(*wl->ie), GFP_KERNEL);
 	if (unlikely(!wl->ie)) {
-		WL_ERR(("wl->ie  alloc failed\n"));
+		AP6210_ERR("wl->ie  alloc failed\n");
 		goto init_priv_mem_out;
 	}
 	wl->escan_info.escan_buf = dhd_os_prealloc(NULL, DHD_PREALLOC_WIPHY_ESCAN0, 0);
@@ -7567,7 +7569,7 @@ static s32 wl_init_priv_mem(struct wl_priv *wl)
 #endif /* STATIC_WL_PRIV_STRUCT */
 	wl->afx_hdl = (void *)kzalloc(sizeof(*wl->afx_hdl), GFP_KERNEL);
 	if (unlikely(!wl->afx_hdl)) {
-		WL_ERR(("afx hdl  alloc failed\n"));
+		AP6210_ERR("afx hdl  alloc failed\n");
 		goto init_priv_mem_out;
 	} else {
 		init_completion(&wl->act_frm_scan);
@@ -7628,7 +7630,7 @@ static void wl_deinit_priv_mem(struct wl_priv *wl)
 static s32 wl_create_event_handler(struct wl_priv *wl)
 {
 	int ret = 0;
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 
 	/* Do not use DHD in cfg driver */
 	wl->event_tsk.thr_pid = -1;
@@ -7652,12 +7654,12 @@ static void wl_destroy_event_handler(struct wl_priv *wl)
 static void wl_term_iscan(struct wl_priv *wl)
 {
 	struct wl_iscan_ctrl *iscan = wl_to_iscan(wl);
-	WL_TRACE(("In\n"));
+	AP6210_DEBUG("In\n");
 	if (wl->iscan_on && iscan->tsk) {
 		iscan->state = WL_ISCAN_STATE_IDLE;
-		WL_INFO(("SIGTERM\n"));
+		AP6210_DEBUG("SIGTERM\n");
 		send_sig(SIGTERM, iscan->tsk, 1);
-		WL_DBG(("kthread_stop\n"));
+		AP6210_DEBUG("kthread_stop\n");
 		kthread_stop(iscan->tsk);
 		iscan->tsk = NULL;
 	}
@@ -7669,10 +7671,10 @@ static void wl_notify_iscan_complete(struct wl_iscan_ctrl *iscan, bool aborted)
 	struct net_device *ndev = wl_to_prmry_ndev(wl);
 	unsigned long flags;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	if (!wl_get_drv_status(wl, SCANNING, ndev)) {
 		wl_clr_drv_status(wl, SCANNING, ndev);
-		WL_ERR(("Scan complete while device not scanning\n"));
+		AP6210_ERR("Scan complete while device not scanning\n");
 		return;
 	}
 	spin_lock_irqsave(&wl->cfgdrv_lock, flags);
@@ -7688,7 +7690,7 @@ static void wl_notify_iscan_complete(struct wl_iscan_ctrl *iscan, bool aborted)
 static s32 wl_wakeup_iscan(struct wl_iscan_ctrl *iscan)
 {
 	if (likely(iscan->state != WL_ISCAN_STATE_IDLE)) {
-		WL_DBG(("wake up iscan\n"));
+		AP6210_DEBUG("wake up iscan\n");
 		up(&iscan->sync);
 		return 0;
 	}
@@ -7705,7 +7707,7 @@ wl_get_iscan_results(struct wl_iscan_ctrl *iscan, u32 *status,
 	struct wl_iscan_results *list_buf;
 	s32 err = 0;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	memset(iscan->scan_buf, 0, WL_ISCAN_BUF_MAX);
 	list_buf = (struct wl_iscan_results *)iscan->scan_buf;
 	results = &list_buf->results;
@@ -7719,14 +7721,14 @@ wl_get_iscan_results(struct wl_iscan_ctrl *iscan, u32 *status,
 		WL_ISCAN_RESULTS_FIXED_SIZE, iscan->scan_buf,
 		WL_ISCAN_BUF_MAX, NULL);
 	if (unlikely(err)) {
-		WL_ERR(("error (%d)\n", err));
+		AP6210_ERR("error (%d)\n", err);
 		return err;
 	}
 	results->buflen = dtoh32(results->buflen);
 	results->version = dtoh32(results->version);
 	results->count = dtoh32(results->count);
-	WL_DBG(("results->count = %d\n", results->count));
-	WL_DBG(("results->buflen = %d\n", results->buflen));
+	AP6210_DEBUG("results->count = %d\n", results->count);
+	AP6210_DEBUG("results->buflen = %d\n", results->buflen);
 	*status = dtoh32(list_buf->status);
 	*bss_list = results;
 
@@ -7808,7 +7810,7 @@ static s32 wl_iscan_thread(void *data)
 		err = wl_get_iscan_results(iscan, &status, &wl->bss_list);
 		if (unlikely(err)) {
 			status = WL_SCAN_RESULTS_ABORTED;
-			WL_ERR(("Abort iscan\n"));
+			AP6210_ERR("Abort iscan\n");
 		}
 		mutex_unlock(&wl->usr_sync);
 		iscan->iscan_handler[status] (wl);
@@ -7817,7 +7819,7 @@ static s32 wl_iscan_thread(void *data)
 		del_timer_sync(&iscan->timer);
 		iscan->timer_on = 0;
 	}
-	WL_DBG(("%s was terminated\n", __func__));
+	AP6210_DEBUG("%s was terminated\n", __func__);
 
 	return 0;
 }
@@ -7828,18 +7830,18 @@ static void wl_scan_timeout(unsigned long data)
 	struct wl_priv *wl = (struct wl_priv *)data;
 
 	if (!(wl->scan_request)) {
-		WL_ERR(("timer expired but no scan request\n"));
+		AP6210_ERR("timer expired but no scan request\n");
 		return;
 	}
 	bzero(&msg, sizeof(wl_event_msg_t));
-		WL_ERR(("timer expired\n"));
+		AP6210_ERR("timer expired\n");
 	if (wl->escan_on) {
 		msg.event_type = hton32(WLC_E_ESCAN_RESULT);
 		msg.status = hton32(WLC_E_STATUS_TIMEOUT);
 		msg.reason = 0xFFFFFFFF;
 		wl_cfg80211_event(wl_to_prmry_ndev(wl), &msg, NULL);
 	} else {
-		WL_ERR(("SCAN Timeout(ISCAN)\n"));
+		AP6210_ERR("SCAN Timeout(ISCAN)\n");
 			wl_notify_iscan_complete(wl_to_iscan(wl), true);
 	}
 }
@@ -7849,7 +7851,7 @@ static void wl_iscan_timer(unsigned long data)
 
 	if (iscan) {
 		iscan->timer_on = 0;
-		WL_DBG(("timer expired\n"));
+		AP6210_DEBUG("timer expired\n");
 		wl_wakeup_iscan(iscan);
 	}
 }
@@ -7864,7 +7866,7 @@ static s32 wl_invoke_iscan(struct wl_priv *wl)
 		sema_init(&iscan->sync, 0);
 		iscan->tsk = kthread_run(wl_iscan_thread, iscan, "wl_iscan");
 		if (IS_ERR(iscan->tsk)) {
-			WL_ERR(("Could not create iscan thread\n"));
+			AP6210_ERR("Could not create iscan thread\n");
 			iscan->tsk = NULL;
 			return -ENOMEM;
 		}
@@ -7893,15 +7895,15 @@ wl_cfg80211_netdev_notifier_call(struct notifier_block * nb,
 	struct wl_priv *wl = wlcfg_drv_priv;
 	int refcnt = 0;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	if (!wdev || !wl || dev == wl_to_prmry_ndev(wl))
 		return NOTIFY_DONE;
 	switch (state) {
 		case NETDEV_DOWN:
 			while (work_pending(&wdev->cleanup_work) && refcnt < 100) {
 				if (refcnt%5 == 0)
-					WL_ERR(("%s : [NETDEV_DOWN] work_pending (%d th)\n",
-						__FUNCTION__, refcnt));
+					AP6210_ERR("%s : [NETDEV_DOWN] work_pending (%d th)\n",
+						__FUNCTION__, refcnt);
 				set_current_state(TASK_INTERRUPTIBLE);
 				schedule_timeout(100);
 				set_current_state(TASK_RUNNING);
@@ -7943,11 +7945,11 @@ static s32 wl_notify_escan_complete(struct wl_priv *wl,
 	unsigned long flags;
 	struct net_device *dev;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 
 	if (wl->escan_info.ndev != ndev)
 	{
-		WL_ERR(("ndev is different %p %p\n", wl->escan_info.ndev, ndev));
+		AP6210_ERR("ndev is different %p %p\n", wl->escan_info.ndev, ndev);
 		return err;
 	}
 
@@ -7958,22 +7960,22 @@ static s32 wl_notify_escan_complete(struct wl_priv *wl,
 			dev = wl->scan_request->dev;
 	}
 	else {
-		WL_DBG(("wl->scan_request is NULL may be internal scan."
+		AP6210_DEBUG("wl->scan_request is NULL may be internal scan."
 			"doing scan_abort for ndev %p primary %p p2p_net %p",
-				ndev, wl_to_prmry_ndev(wl), wl->p2p_net));
+				ndev, wl_to_prmry_ndev(wl), wl->p2p_net);
 		dev = ndev;
 	}
 	if (fw_abort && !in_atomic()) {
 		/* Our scan params only need space for 1 channel and 0 ssids */
 		params = wl_cfg80211_scan_alloc_params(-1, 0, &params_size);
 		if (params == NULL) {
-			WL_ERR(("scan params allocation failed \n"));
+			AP6210_ERR("scan params allocation failed \n");
 			err = -ENOMEM;
 		} else {
 			/* Do a scan abort to stop the driver's scan engine */
 			err = wldev_ioctl(dev, WLC_SCAN, params, params_size, true);
 			if (err < 0) {
-				WL_ERR(("scan abort  failed \n"));
+				AP6210_ERR("scan abort  failed \n");
 			}
 		}
 	}
@@ -7988,7 +7990,7 @@ static s32 wl_notify_escan_complete(struct wl_priv *wl,
 	spin_lock_irqsave(&wl->cfgdrv_lock, flags);
 #ifdef WL_SCHED_SCAN
 	if (wl->sched_scan_req && !wl->scan_request) {
-		WL_PNO((">>> REPORTING SCHED SCAN RESULTS \n"));
+		AP6210_DEBUG(">>> REPORTING SCHED SCAN RESULTS \n");
 		if (aborted)
 			cfg80211_sched_scan_stopped(wl->sched_scan_req->wiphy);
 		else
@@ -8026,8 +8028,8 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 	u32 i;
 	u8 *p2p_dev_addr = NULL;
 
-	WL_DBG((" enter event type : %d, status : %d \n",
-		ntoh32(e->event_type), ntoh32(e->status)));
+	AP6210_DEBUG(" enter event type : %d, status : %d \n",
+		ntoh32(e->event_type), ntoh32(e->status));
 
 	mutex_lock(&wl->usr_sync);
 	/* P2P SCAN is coming from primary interface */
@@ -8041,35 +8043,35 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 	if (!ndev || !wl->escan_on ||
 		(!wl_get_drv_status(wl, SCANNING, ndev) &&
 		!wl->sched_scan_running)) {
-		WL_ERR(("escan is not ready ndev %p wl->escan_on %d drv_status 0x%x\n",
-			ndev, wl->escan_on, wl_get_drv_status(wl, SCANNING, ndev)));
+		AP6210_ERR("escan is not ready ndev %p wl->escan_on %d drv_status 0x%x\n",
+			ndev, wl->escan_on, wl_get_drv_status(wl, SCANNING, ndev));
 		goto exit;
 	}
 	if (status == WLC_E_STATUS_PARTIAL) {
-		WL_INFO(("WLC_E_STATUS_PARTIAL \n"));
+		AP6210_DEBUG("WLC_E_STATUS_PARTIAL \n");
 		escan_result = (wl_escan_result_t *) data;
 		if (!escan_result) {
-			WL_ERR(("Invalid escan result (NULL pointer)\n"));
+			AP6210_ERR("Invalid escan result (NULL pointer)\n");
 			goto exit;
 		}
 		if (dtoh16(escan_result->bss_count) != 1) {
-			WL_ERR(("Invalid bss_count %d: ignoring\n", escan_result->bss_count));
+			AP6210_ERR("Invalid bss_count %d: ignoring\n", escan_result->bss_count);
 			goto exit;
 		}
 		bi = escan_result->bss_info;
 		if (!bi) {
-			WL_ERR(("Invalid escan bss info (NULL pointer)\n"));
+			AP6210_ERR("Invalid escan bss info (NULL pointer)\n");
 			goto exit;
 		}
 		bi_length = dtoh32(bi->length);
 		if (bi_length != (dtoh32(escan_result->buflen) - WL_ESCAN_RESULTS_FIXED_SIZE)) {
-			WL_ERR(("Invalid bss_info length %d: ignoring\n", bi_length));
+			AP6210_ERR("Invalid bss_info length %d: ignoring\n", bi_length);
 			goto exit;
 		}
 
 		if (!(wl_to_wiphy(wl)->interface_modes & BIT(NL80211_IFTYPE_ADHOC))) {
 			if (dtoh16(bi->capability) & DOT11_CAP_IBSS) {
-				WL_DBG(("Ignoring IBSS result\n"));
+				AP6210_DEBUG("Ignoring IBSS result\n");
 				goto exit;
 			}
 		}
@@ -8080,8 +8082,8 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 				wl->afx_hdl->tx_dst_addr.octet, ETHER_ADDR_LEN)) {
 				s32 channel = CHSPEC_CHANNEL(
 					wl_chspec_driver_to_host(bi->chanspec));
-				WL_DBG(("ACTION FRAME SCAN : Peer " MACDBG " found, channel : %d\n",
-					MAC2STRDBG(wl->afx_hdl->tx_dst_addr.octet), channel));
+				AP6210_DEBUG("ACTION FRAME SCAN : Peer " MACDBG " found, channel : %d\n",
+					MAC2STRDBG(wl->afx_hdl->tx_dst_addr.octet), channel);
 				wl_clr_p2p_status(wl, SCANNING);
 				wl->afx_hdl->peer_chan = channel;
 				complete(&wl->act_frm_scan);
@@ -8107,8 +8109,8 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 					goto exit;
 				if ((p2p_ie = wl_cfgp2p_find_p2pie(((u8 *) bi) + bi->ie_offset,
 					bi->ie_length)) == NULL) {
-						WL_ERR(("Couldn't find P2PIE in probe"
-							" response/beacon\n"));
+						AP6210_ERR("Couldn't find P2PIE in probe"
+							" response/beacon\n");
 						goto exit;
 				}
 #ifdef WL_HOST_BAND_MGMT
@@ -8143,47 +8145,47 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 						(bi->flags & WL_BSS_FLAGS_FROM_BEACON))
 						goto exit;
 
-					WL_DBG(("%s("MACDBG"), i=%d prev: RSSI %d"
+					AP6210_DEBUG("%s("MACDBG"), i=%d prev: RSSI %d"
 						" flags 0x%x, new: RSSI %d flags 0x%x\n",
 						bss->SSID, MAC2STRDBG(bi->BSSID.octet), i,
-						bss->RSSI, bss->flags, bi->RSSI, bi->flags));
+						bss->RSSI, bss->flags, bi->RSSI, bi->flags);
 
 					if ((bss->flags & WL_BSS_FLAGS_RSSI_ONCHANNEL) ==
 						(bi->flags & WL_BSS_FLAGS_RSSI_ONCHANNEL)) {
 						/* preserve max RSSI if the measurements are
 						* both on-channel or both off-channel
 						*/
-						WL_SCAN(("%s("MACDBG"), same onchan"
+						AP6210_DEBUG("%s("MACDBG"), same onchan"
 						", RSSI: prev %d new %d\n",
 						bss->SSID, MAC2STRDBG(bi->BSSID.octet),
-						bss->RSSI, bi->RSSI));
+						bss->RSSI, bi->RSSI);
 						bi->RSSI = MAX(bss->RSSI, bi->RSSI);
 					} else if ((bss->flags & WL_BSS_FLAGS_RSSI_ONCHANNEL) &&
 						(bi->flags & WL_BSS_FLAGS_RSSI_ONCHANNEL) == 0) {
 						/* preserve the on-channel rssi measurement
 						* if the new measurement is off channel
 						*/
-						WL_SCAN(("%s("MACDBG"), prev onchan"
+						AP6210_DEBUG("%s("MACDBG"), prev onchan"
 						", RSSI: prev %d new %d\n",
 						bss->SSID, MAC2STRDBG(bi->BSSID.octet),
-						bss->RSSI, bi->RSSI));
+						bss->RSSI, bi->RSSI);
 						bi->RSSI = bss->RSSI;
 						bi->flags |= WL_BSS_FLAGS_RSSI_ONCHANNEL;
 					}
 					if (dtoh32(bss->length) != bi_length) {
 						u32 prev_len = dtoh32(bss->length);
 
-						WL_SCAN(("bss info replacement"
+						AP6210_DEBUG("bss info replacement"
 							" is occured(bcast:%d->probresp%d)\n",
-							bss->ie_length, bi->ie_length));
-						WL_DBG(("%s("MACDBG"), replacement!(%d -> %d)\n",
+							bss->ie_length, bi->ie_length);
+						AP6210_DEBUG("%s("MACDBG"), replacement!(%d -> %d)\n",
 						bss->SSID, MAC2STRDBG(bi->BSSID.octet),
-						prev_len, bi_length));
+						prev_len, bi_length);
 
 						if (list->buflen - prev_len + bi_length
 							> ESCAN_BUF_SIZE) {
-							WL_ERR(("Buffer is too small: keep the"
-								" previous result of this AP\n"));
+							AP6210_ERR("Buffer is too small: keep the"
+								" previous result of this AP\n");
 							/* Only update RSSI */
 							bss->RSSI = bi->RSSI;
 							bss->flags |= (bi->flags
@@ -8207,11 +8209,11 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 				cur_len += dtoh32(bss->length);
 			}
 			if (bi_length > ESCAN_BUF_SIZE - list->buflen) {
-				WL_ERR(("Buffer is too small: ignoring\n"));
+				AP6210_ERR("Buffer is too small: ignoring\n");
 				goto exit;
 			}
 			if (strlen(bi->SSID) == 0) { // terence: fix for hidden SSID
-				WL_SCAN(("Skip hidden SSID %pM\n", &bi->BSSID));
+				AP6210_DEBUG("Skip hidden SSID %pM\n", &bi->BSSID);
 				goto exit;
 			}
 			memcpy(&(wl->escan_info.escan_buf[list->buflen]), bi, bi_length);
@@ -8224,13 +8226,13 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 	else if (status == WLC_E_STATUS_SUCCESS) {
 		wl->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
 		if (wl_get_drv_status_all(wl, FINDING_COMMON_CHANNEL)) {
-			WL_INFO(("ACTION FRAME SCAN DONE\n"));
+			AP6210_DEBUG("ACTION FRAME SCAN DONE\n");
 			wl_clr_p2p_status(wl, SCANNING);
 			wl_clr_drv_status(wl, SCANNING, wl->afx_hdl->dev);
 			if (wl->afx_hdl->peer_chan == WL_INVALID)
 				complete(&wl->act_frm_scan);
 		} else if ((likely(wl->scan_request)) || (wl->sched_scan_running)) {
-			WL_INFO(("ESCAN COMPLETED\n"));
+			AP6210_DEBUG("ESCAN COMPLETED\n");
 			wl->bss_list = (wl_scan_results_t *)wl->escan_info.escan_buf;
 			wl_inform_bss(wl);
 			wl_notify_escan_complete(wl, ndev, false, false);
@@ -8239,13 +8241,13 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 	else if (status == WLC_E_STATUS_ABORT) {
 		wl->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
 		if (wl_get_drv_status_all(wl, FINDING_COMMON_CHANNEL)) {
-			WL_INFO(("ACTION FRAME SCAN DONE\n"));
+			AP6210_DEBUG("ACTION FRAME SCAN DONE\n");
 			wl_clr_drv_status(wl, SCANNING, wl->afx_hdl->dev);
 			wl_clr_p2p_status(wl, SCANNING);
 			if (wl->afx_hdl->peer_chan == WL_INVALID)
 				complete(&wl->act_frm_scan);
 		} else if ((likely(wl->scan_request)) || (wl->sched_scan_running)) {
-			WL_INFO(("ESCAN ABORTED\n"));
+			AP6210_DEBUG("ESCAN ABORTED\n");
 			wl->bss_list = (wl_scan_results_t *)wl->escan_info.escan_buf;
 			wl_inform_bss(wl);
 			wl_notify_escan_complete(wl, ndev, true, false);
@@ -8254,20 +8256,20 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 	else if (status == WLC_E_STATUS_NEWSCAN)
 	{
 		escan_result = (wl_escan_result_t *) data;
-		WL_ERR(("WLC_E_STATUS_NEWSCAN : scan_request[%p]\n", wl->scan_request));
-		WL_ERR(("sync_id[%d], bss_count[%d]\n", escan_result->sync_id,
-			escan_result->bss_count));
+		AP6210_ERR("WLC_E_STATUS_NEWSCAN : scan_request[%p]\n", wl->scan_request);
+		AP6210_ERR("sync_id[%d], bss_count[%d]\n", escan_result->sync_id,
+			escan_result->bss_count);
 	} else if (status == WLC_E_STATUS_TIMEOUT) {
-		WL_ERR(("WLC_E_STATUS_TIMEOUT : scan_request[%p]\n", wl->scan_request));
-		WL_ERR(("escan_on[%d], reason[0x%x]\n", wl->escan_on, e->reason));
+		AP6210_ERR("WLC_E_STATUS_TIMEOUT : scan_request[%p]\n", wl->scan_request);
+		AP6210_ERR("escan_on[%d], reason[0x%x]\n", wl->escan_on, e->reason);
 		if (e->reason == 0xFFFFFFFF) {
 			wl_notify_escan_complete(wl, wl->escan_info.ndev, true, true);
 		}
 	} else {
-		WL_ERR(("unexpected Escan Event %d : abort\n", status));
+		AP6210_ERR("unexpected Escan Event %d : abort\n", status);
 		wl->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
 		if (wl_get_drv_status_all(wl, FINDING_COMMON_CHANNEL)) {
-			WL_INFO(("ACTION FRAME SCAN DONE\n"));
+			AP6210_DEBUG("ACTION FRAME SCAN DONE\n");
 			wl_clr_p2p_status(wl, SCANNING);
 			wl_clr_drv_status(wl, SCANNING, wl->afx_hdl->dev);
 			if (wl->afx_hdl->peer_chan == WL_INVALID)
@@ -8295,13 +8297,13 @@ static void wl_cfg80211_concurrent_roam(struct wl_priv *wl, int enable)
 			/* Save the current roam setting */
 			if ((err = wldev_iovar_getint(iter->ndev, "roam_off",
 				(s32 *)&iter->roam_off)) != BCME_OK) {
-				WL_ERR(("%s:Failed to get current roam setting err %d\n",
-					iter->ndev->name, err));
+				AP6210_ERR("%s:Failed to get current roam setting err %d\n",
+					iter->ndev->name, err);
 				continue;
 			}
 			if ((err = wldev_iovar_setint(iter->ndev, "roam_off", 1)) != BCME_OK) {
-				WL_ERR((" %s:failed to set roam_off : %d\n",
-					iter->ndev->name, err));
+				AP6210_ERR(" %s:failed to set roam_off : %d\n",
+					iter->ndev->name, err);
 			}
 		}
 	}
@@ -8312,8 +8314,8 @@ static void wl_cfg80211_concurrent_roam(struct wl_priv *wl, int enable)
 					iter->roam_off)) == BCME_OK)
 					iter->roam_off = WL_INVALID;
 				else {
-					WL_ERR((" %s:failed to set roam_off : %d\n",
-						iter->ndev->name, err));
+					AP6210_ERR(" %s:failed to set roam_off : %d\n",
+						iter->ndev->name, err);
 				}
 			}
 		}
@@ -8365,8 +8367,8 @@ static s32 wl_notifier_change_state(struct wl_priv *wl, struct net_info *_net_in
 	u32 chan = 0;
 	struct net_info *iter, *next;
 	struct net_device *primary_dev = wl_to_prmry_ndev(wl);
-	WL_DBG(("Enter state %d set %d _net_info->pm_restore %d iface %s\n",
-		state, set, _net_info->pm_restore, _net_info->ndev->name));
+	AP6210_DEBUG("Enter state %d set %d _net_info->pm_restore %d iface %s\n",
+		state, set, _net_info->pm_restore, _net_info->ndev->name);
 
 	if (state != WL_STATUS_CONNECTED)
 		return 0;
@@ -8376,18 +8378,18 @@ static s32 wl_notifier_change_state(struct wl_priv *wl, struct net_info *_net_in
 
 		if (wl_get_mode_by_netdev(wl, _net_info->ndev) == WL_MODE_AP) {
 			pm = PM_OFF;
-			WL_DBG(("%s:AP power save %s\n", _net_info->ndev->name,
-				pm ? "enabled" : "disabled"));
+			AP6210_DEBUG("%s:AP power save %s\n", _net_info->ndev->name,
+				pm ? "enabled" : "disabled");
 			if ((err = wldev_ioctl(_net_info->ndev, WLC_SET_PM,
 				&pm, sizeof(pm), true)) != 0) {
 				if (err == -ENODEV)
-					WL_DBG(("%s:net_device is not ready\n",
-						_net_info->ndev->name));
+					AP6210_DEBUG("%s:net_device is not ready\n",
+						_net_info->ndev->name);
 				else
-					WL_ERR(("%s:error (%d)\n", _net_info->ndev->name, err));
+					AP6210_ERR("%s:error (%d)\n", _net_info->ndev->name, err);
 			}
 			if (wl_add_remove_eventmsg(primary_dev, WLC_E_P2P_PROBREQ_MSG, false))
-				WL_ERR((" failed to unset WLC_E_P2P_PROPREQ_MSG\n"));
+				AP6210_ERR(" failed to unset WLC_E_P2P_PROPREQ_MSG\n");
 			return 0;
 		}
 		wl_cfg80211_determine_vsdb_mode(wl);
@@ -8403,14 +8405,14 @@ static s32 wl_notifier_change_state(struct wl_priv *wl, struct net_info *_net_in
 			iter->pm_restore = true;
 			err = wldev_ioctl(iter->ndev, WLC_GET_PM, &iter->pm,
 				sizeof(iter->pm), false);
-			WL_DBG(("%s:power save %s\n", iter->ndev->name,
-				iter->pm ? "enabled" : "disabled"));
+			AP6210_DEBUG("%s:power save %s\n", iter->ndev->name,
+				iter->pm ? "enabled" : "disabled");
 			if ((err = wldev_ioctl(iter->ndev, WLC_SET_PM, &pm,
 				sizeof(pm), true)) != 0) {
 				if (err == -ENODEV)
-					WL_DBG(("%s:netdev not ready\n", iter->ndev->name));
+					AP6210_DEBUG("%s:netdev not ready\n", iter->ndev->name);
 				else
-					WL_ERR(("%s:error (%d)\n", iter->ndev->name, err));
+					AP6210_ERR("%s:error (%d)\n", iter->ndev->name, err);
 				iter->ndev->ieee80211_ptr->ps = pm ? true: false;
 			}
 		}
@@ -8422,15 +8424,15 @@ static s32 wl_notifier_change_state(struct wl_priv *wl, struct net_info *_net_in
 		wl_cfg80211_determine_vsdb_mode(wl);
 		for_each_ndev(wl, iter, next) {
 			if (iter->pm_restore) {
-				WL_DBG(("%s:restoring power save %s\n",
-					iter->ndev->name, (iter->pm ? "enabled" : "disabled")));
+				AP6210_DEBUG("%s:restoring power save %s\n",
+					iter->ndev->name, (iter->pm ? "enabled" : "disabled"));
 				err = wldev_ioctl(iter->ndev,
 					WLC_SET_PM, &iter->pm, sizeof(iter->pm), true);
 				if (unlikely(err)) {
 					if (err == -ENODEV)
-						WL_DBG(("%s:netdev not ready\n", iter->ndev->name));
+						AP6210_DEBUG("%s:netdev not ready\n", iter->ndev->name);
 					else
-						WL_ERR(("%s:error(%d)\n", iter->ndev->name, err));
+						AP6210_ERR("%s:error(%d)\n", iter->ndev->name, err);
 					break;
 				}
 				iter->pm_restore = 0;
@@ -8457,7 +8459,7 @@ static s32 wl_init_scan(struct wl_priv *wl)
 		sema_init(&iscan->sync, 0);
 		iscan->tsk = kthread_run(wl_iscan_thread, iscan, "wl_iscan");
 		if (IS_ERR(iscan->tsk)) {
-			WL_ERR(("Could not create iscan thread\n"));
+			AP6210_ERR("Could not create iscan thread\n");
 			iscan->tsk = NULL;
 			return -ENOMEM;
 		}
@@ -8535,10 +8537,10 @@ static s32 wl_cfg80211_attach_p2p(void)
 {
 	struct wl_priv *wl = wlcfg_drv_priv;
 
-	WL_TRACE(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 
 	if (wl_cfgp2p_register_ndev(wl) < 0) {
-		WL_ERR(("%s: P2P attach failed. \n", __func__));
+		AP6210_ERR("%s: P2P attach failed. \n", __func__);
 		return -ENODEV;
 	}
 
@@ -8550,9 +8552,9 @@ static s32  wl_cfg80211_detach_p2p(void)
 	struct wl_priv *wl = wlcfg_drv_priv;
 	struct wireless_dev *wdev = wl->p2p_wdev;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	if (!wdev || !wl) {
-		WL_ERR(("Invalid Ptr\n"));
+		AP6210_ERR("Invalid Ptr\n");
 		return -EINVAL;
 	}
 
@@ -8560,7 +8562,7 @@ static s32  wl_cfg80211_detach_p2p(void)
 
 	wl->p2p_wdev = NULL;
 	wl->p2p_net = NULL;
-	WL_DBG(("Freeing 0x%08x \n", (unsigned int)wdev));
+	AP6210_DEBUG("Freeing 0x%08x \n", (unsigned int)wdev);
 	kfree(wdev);
 
 	return 0;
@@ -8571,14 +8573,14 @@ s32 wl_cfg80211_attach_post(struct net_device *ndev)
 {
 	struct wl_priv * wl = NULL;
 	s32 err = 0;
-	WL_TRACE(("In\n"));
+	AP6210_DEBUG("In\n");
 	if (unlikely(!ndev)) {
-		WL_ERR(("ndev is invaild\n"));
+		AP6210_ERR("ndev is invaild\n");
 		return -ENODEV;
 	}
 	wl = wlcfg_drv_priv;
 	if (unlikely(!wl)) {
-		WL_ERR(("wl is invaild\n"));
+		AP6210_ERR("wl is invaild\n");
 		return -EINVAL;
 	}
 	if (!wl_get_drv_status(wl, READY, ndev)) {
@@ -8597,12 +8599,12 @@ s32 wl_cfg80211_attach_post(struct net_device *ndev)
 					/* Update MAC addr for p2p0 interface here. */
 					memcpy(wl->p2p_net->dev_addr, ndev->dev_addr, ETH_ALEN);
 					wl->p2p_net->dev_addr[0] |= 0x02;
-					WL_ERR(("%s: p2p_dev_addr="MACDBG "\n",
+					AP6210_ERR("%s: p2p_dev_addr="MACDBG "\n",
 						wl->p2p_net->name,
-						MAC2STRDBG(wl->p2p_net->dev_addr)));
+						MAC2STRDBG(wl->p2p_net->dev_addr));
 				} else {
-					WL_ERR(("p2p_net not yet populated."
-					" Couldn't update the MAC Address for p2p0 \n"));
+					AP6210_ERR("p2p_net not yet populated."
+					" Couldn't update the MAC Address for p2p0 \n");
 					return -ENODEV;
 				}
 #endif /* defined(WLP2P) && (WL_ENABLE_P2P_IF) */
@@ -8622,17 +8624,17 @@ s32 wl_cfg80211_attach(struct net_device *ndev, void *data)
 	s32 err = 0;
 	struct device *dev;
 
-	WL_TRACE(("In\n"));
+	AP6210_DEBUG("In\n");
 	if (!ndev) {
-		WL_ERR(("ndev is invaild\n"));
+		AP6210_ERR("ndev is invaild\n");
 		return -ENODEV;
 	}
-	WL_DBG(("func %p\n", wl_cfg80211_get_parent_dev()));
+	AP6210_DEBUG("func %p\n", wl_cfg80211_get_parent_dev());
 	dev = wl_cfg80211_get_parent_dev();
 
 	wdev = kzalloc(sizeof(*wdev), GFP_KERNEL);
 	if (unlikely(!wdev)) {
-		WL_ERR(("Could not allocate wireless device\n"));
+		AP6210_ERR("Could not allocate wireless device\n");
 		return -ENOMEM;
 	}
 	err = wl_setup_wiphy(wdev, dev);
@@ -8651,23 +8653,23 @@ s32 wl_cfg80211_attach(struct net_device *ndev, void *data)
 	wl->state_notifier = wl_notifier_change_state;
 	err = wl_alloc_netinfo(wl, ndev, wdev, WL_MODE_BSS, PM_ENABLE);
 	if (err) {
-		WL_ERR(("Failed to alloc net_info (%d)\n", err));
+		AP6210_ERR("Failed to alloc net_info (%d)\n", err);
 		goto cfg80211_attach_out;
 	}
 	err = wl_init_priv(wl);
 	if (err) {
-		WL_ERR(("Failed to init iwm_priv (%d)\n", err));
+		AP6210_ERR("Failed to init iwm_priv (%d)\n", err);
 		goto cfg80211_attach_out;
 	}
 
 	err = wl_setup_rfkill(wl, TRUE);
 	if (err) {
-		WL_ERR(("Failed to setup rfkill %d\n", err));
+		AP6210_ERR("Failed to setup rfkill %d\n", err);
 		goto cfg80211_attach_out;
 	}
 	err = register_netdevice_notifier(&wl_cfg80211_netdev_notifier);
 	if (err) {
-		WL_ERR(("Failed to register notifierl %d\n", err));
+		AP6210_ERR("Failed to register notifierl %d\n", err);
 		goto cfg80211_attach_out;
 	}
 #if defined(COEX_DHCP)
@@ -8701,7 +8703,7 @@ void wl_cfg80211_detach(void *para)
 	(void)para;
 	wl = wlcfg_drv_priv;
 
-	WL_TRACE(("In\n"));
+	AP6210_DEBUG("In\n");
 
 #if defined(COEX_DHCP)
 	wl_cfg80211_btcoex_deinit(wl);
@@ -8754,8 +8756,8 @@ static int wl_is_p2p_event(struct wl_event_q *e)
 	case WLC_E_ACTION_FRAME_COMPLETE:
 
 		if (e->emsg.ifidx != 0) {
-			WL_TRACE(("P2P Event on Virtual I/F (ifidx:%d) \n",
-			e->emsg.ifidx));
+			AP6210_DEBUG("P2P Event on Virtual I/F (ifidx:%d) \n",
+			e->emsg.ifidx);
 			/* We are only bothered about the P2P events received
 			 * on primary interface. For rest of them return false
 			 * so that it is sent over the interface corresponding
@@ -8763,15 +8765,15 @@ static int wl_is_p2p_event(struct wl_event_q *e)
 			 */
 			return FALSE;
 		} else {
-			WL_TRACE(("P2P Event on Primary I/F (ifidx:%d)."
-				" Sent it to p2p0 \n", e->emsg.ifidx));
+			AP6210_DEBUG("P2P Event on Primary I/F (ifidx:%d)."
+				" Sent it to p2p0 \n", e->emsg.ifidx);
 			return TRUE;
 		}
 		break;
 
 	default:
-		WL_TRACE(("NON-P2P Event %d on ifidx (ifidx:%d) \n",
-			e->etype, e->emsg.ifidx));
+		AP6210_DEBUG("NON-P2P Event %d on ifidx (ifidx:%d) \n",
+			e->etype, e->emsg.ifidx);
 		return FALSE;
 	}
 }
@@ -8788,7 +8790,7 @@ static s32 wl_event_handler(void *data)
 	DAEMONIZE("dhd_cfg80211_event");
 	complete(&tsk->completed);
 #else
-	WL_ERR(("tsk Enter, tsk = 0x%08x\n", (unsigned int)tsk));
+	AP6210_ERR("tsk Enter, tsk = 0x%08x\n", (unsigned int)tsk);
 #endif
 
 	while (down_interruptible (&tsk->sema) == 0) {
@@ -8796,7 +8798,7 @@ static s32 wl_event_handler(void *data)
 		if (tsk->terminated)
 			break;
 		while ((e = wl_deq_event(wl))) {
-			WL_DBG(("event type (%d), if idx: %d\n", e->etype, e->emsg.ifidx));
+			AP6210_DEBUG("event type (%d), if idx: %d\n", e->etype, e->emsg.ifidx);
 			/* All P2P device address related events comes on primary interface since
 			 * there is no corresponding bsscfg for P2P interface. Map it to p2p0
 			 * interface.
@@ -8811,13 +8813,13 @@ static s32 wl_event_handler(void *data)
 			if (e->etype < WLC_E_LAST && wl->evt_handler[e->etype]) {
 				wl->evt_handler[e->etype] (wl, netdev, &e->emsg, e->edata);
 			} else {
-				WL_DBG(("Unknown Event (%d): ignoring\n", e->etype));
+				AP6210_DEBUG("Unknown Event (%d): ignoring\n", e->etype);
 			}
 			wl_put_event(e);
 		}
 		DHD_OS_WAKE_UNLOCK(wl->pub);
 	}
-	WL_ERR(("%s was terminated\n", __func__));
+	AP6210_ERR("%s was terminated\n", __func__);
 	complete_and_exit(&tsk->completed, 0);
 	return 0;
 }
@@ -8831,14 +8833,14 @@ wl_cfg80211_event(struct net_device *ndev, const wl_event_msg_t * e, void *data)
 #if (WL_DBG_LEVEL > 0)
 	s8 *estr = (event_type <= sizeof(wl_dbg_estr) / WL_DBG_ESTR_MAX - 1) ?
 	    wl_dbg_estr[event_type] : (s8 *) "Unknown";
-	WL_DBG(("event_type (%d):" "WLC_E_" "%s\n", event_type, estr));
+	AP6210_DEBUG("event_type (%d):" "WLC_E_" "%s\n", event_type, estr);
 #endif /* (WL_DBG_LEVEL > 0) */
 
 	if (event_type == WLC_E_PFN_NET_FOUND) {
-		WL_DBG((" PNOEVENT: PNO_NET_FOUND\n"));
+		AP6210_DEBUG(" PNOEVENT: PNO_NET_FOUND\n");
 	}
 	else if (event_type == WLC_E_PFN_NET_LOST) {
-		WL_DBG((" PNOEVENT: PNO_NET_LOST\n"));
+		AP6210_DEBUG(" PNOEVENT: PNO_NET_LOST\n");
 	}
 
 	if (likely(!wl_enq_event(wl, ndev, event_type, e, data)))
@@ -8906,7 +8908,7 @@ wl_enq_event(struct wl_priv *wl, struct net_device *ndev, u32 event, const wl_ev
 	aflags = (in_atomic()) ? GFP_ATOMIC : GFP_KERNEL;
 	e = kzalloc(evtq_size, aflags);
 	if (unlikely(!e)) {
-		WL_ERR(("event alloc failed\n"));
+		AP6210_ERR("event alloc failed\n");
 		return -ENOMEM;
 	}
 	e->etype = event;
@@ -8933,8 +8935,8 @@ static s32 wl_config_ifmode(struct wl_priv *wl, struct net_device *ndev, s32 ift
 	switch (iftype) {
 	case NL80211_IFTYPE_MONITOR:
 	case NL80211_IFTYPE_WDS:
-		WL_ERR(("type (%d) : currently we do not support this mode\n",
-			iftype));
+		AP6210_ERR("type (%d) : currently we do not support this mode\n",
+			iftype);
 		err = -EINVAL;
 		return err;
 	case NL80211_IFTYPE_ADHOC:
@@ -8952,13 +8954,13 @@ static s32 wl_config_ifmode(struct wl_priv *wl, struct net_device *ndev, s32 ift
 		break;
 	default:
 		err = -EINVAL;
-		WL_ERR(("invalid type (%d)\n", iftype));
+		AP6210_ERR("invalid type (%d)\n", iftype);
 		return err;
 	}
 	infra = htod32(infra);
 	err = wldev_ioctl(ndev, WLC_SET_INFRA, &infra, sizeof(infra), true);
 	if (unlikely(err)) {
-		WL_ERR(("WLC_SET_INFRA error (%d)\n", err));
+		AP6210_ERR("WLC_SET_INFRA error (%d)\n", err);
 		return err;
 	}
 
@@ -8977,8 +8979,8 @@ void wl_cfg80211_add_to_eventbuffer(struct wl_eventmsg_buf *ev, u16 event, bool 
 		ev->event[ev->num].set = set;
 		ev->num++;
 	} else {
-		WL_ERR(("evenbuffer doesn't support > %u events. Update"
-			" the define MAX_EVENT_BUF_NUM \n", MAX_EVENT_BUF_NUM));
+		AP6210_ERR("evenbuffer doesn't support > %u events. Update"
+			" the define MAX_EVENT_BUF_NUM \n", MAX_EVENT_BUF_NUM);
 		ASSERT(0);
 	}
 }
@@ -9002,7 +9004,7 @@ s32 wl_cfg80211_apply_eventbuffer(
 		sizeof(iovbuf));
 	ret = wldev_ioctl(ndev, WLC_GET_VAR, iovbuf, sizeof(iovbuf), false);
 	if (unlikely(ret)) {
-		WL_ERR(("Get event_msgs error (%d)\n", ret));
+		AP6210_ERR("Get event_msgs error (%d)\n", ret);
 		goto exit;
 	}
 	memcpy(eventmask, iovbuf, WL_EVENTING_MASK_LEN);
@@ -9020,7 +9022,7 @@ s32 wl_cfg80211_apply_eventbuffer(
 		sizeof(iovbuf));
 	ret = wldev_ioctl(ndev, WLC_SET_VAR, iovbuf, sizeof(iovbuf), true);
 	if (unlikely(ret)) {
-		WL_ERR(("Set event_msgs error (%d)\n", ret));
+		AP6210_ERR("Set event_msgs error (%d)\n", ret);
 	}
 
 exit:
@@ -9045,7 +9047,7 @@ s32 wl_add_remove_eventmsg(struct net_device *ndev, u16 event, bool add)
 		sizeof(iovbuf));
 	err = wldev_ioctl(ndev, WLC_GET_VAR, iovbuf, sizeof(iovbuf), false);
 	if (unlikely(err)) {
-		WL_ERR(("Get event_msgs error (%d)\n", err));
+		AP6210_ERR("Get event_msgs error (%d)\n", err);
 		goto eventmsg_out;
 	}
 	memcpy(eventmask, iovbuf, WL_EVENTING_MASK_LEN);
@@ -9058,7 +9060,7 @@ s32 wl_add_remove_eventmsg(struct net_device *ndev, u16 event, bool add)
 		sizeof(iovbuf));
 	err = wldev_ioctl(ndev, WLC_SET_VAR, iovbuf, sizeof(iovbuf), true);
 	if (unlikely(err)) {
-		WL_ERR(("Set event_msgs error (%d)\n", err));
+		AP6210_ERR("Set event_msgs error (%d)\n", err);
 		goto eventmsg_out;
 	}
 
@@ -9084,7 +9086,7 @@ static int wl_construct_reginfo(struct wl_priv *wl, s32 bw_cap)
 	pbuf = kzalloc(LOCAL_BUF_LEN, GFP_KERNEL);
 
 	if (pbuf == NULL) {
-		WL_ERR(("failed to allocate local buf\n"));
+		AP6210_ERR("failed to allocate local buf\n");
 		return -ENOMEM;
 	}
 	list = (wl_uint32_list_t *)(void *) pbuf;
@@ -9094,7 +9096,7 @@ static int wl_construct_reginfo(struct wl_priv *wl, s32 bw_cap)
 	err = wldev_iovar_getbuf_bsscfg(dev, "chanspecs", NULL,
 		0, pbuf, LOCAL_BUF_LEN, 0, &wl->ioctl_buf_sync);
 	if (err != 0) {
-		WL_ERR(("get chanspecs failed with %d\n", err));
+		AP6210_ERR("get chanspecs failed with %d\n", err);
 		kfree(pbuf);
 		return err;
 	}
@@ -9115,7 +9117,7 @@ static int wl_construct_reginfo(struct wl_priv *wl, s32 bw_cap)
 			else
 				channel -= CH_10MHZ_APART;
 		} else if (CHSPEC_IS80(c)) {
-			WL_DBG(("HT80 center channel : %d\n", channel));
+			AP6210_DEBUG("HT80 center channel : %d\n", channel);
 			continue;
 		}
 		if (CHSPEC_IS2G(c) && (channel >= CH_MIN_2G_CHANNEL) &&
@@ -9132,7 +9134,7 @@ static int wl_construct_reginfo(struct wl_priv *wl, s32 bw_cap)
 			band = IEEE80211_BAND_5GHZ;
 			ht40_allowed = (bw_cap  == WLC_N_BW_20ALL)? false : true;
 		} else {
-			WL_ERR(("Invalid channel Sepc. 0x%x.\n", c));
+			AP6210_ERR("Invalid channel Sepc. 0x%x.\n", c);
 			continue;
 		}
 		if (!ht40_allowed && CHSPEC_IS40(c))
@@ -9232,7 +9234,7 @@ s32 wl_update_wiphybands(struct wl_priv *wl, bool notify)
 	err = wldev_ioctl(dev, WLC_GET_BANDLIST, bandlist,
 		sizeof(bandlist), false);
 	if (unlikely(err)) {
-		WL_ERR(("error read bandlist (%d)\n", err));
+		AP6210_ERR("error read bandlist (%d)\n", err);
 		goto end_bands;
 	}
 
@@ -9241,24 +9243,24 @@ s32 wl_update_wiphybands(struct wl_priv *wl, bool notify)
 	err = wldev_ioctl(dev, WLC_GET_BAND, &cur_band,
 		sizeof(s32), false);
 	if (unlikely(err)) {
-		WL_ERR(("error (%d)\n", err));
+		AP6210_ERR("error (%d)\n", err);
 		goto end_bands;
 	}
 
 	err = wldev_iovar_getint(dev, "nmode", &nmode);
 	if (unlikely(err)) {
-		WL_ERR(("error reading nmode (%d)\n", err));
+		AP6210_ERR("error reading nmode (%d)\n", err);
 	} else {
 		/* For nmodeonly check bw cap */
 		err = wldev_iovar_getint(dev, "mimo_bw_cap", &bw_cap);
 		if (unlikely(err)) {
-			 WL_ERR(("error get mimo_bw_cap (%d)\n", err));
+			 AP6210_ERR("error get mimo_bw_cap (%d)\n", err);
 		}
 	}
 
 	err = wl_construct_reginfo(wl, bw_cap);
 	if (err) {
-		WL_ERR(("wl_construct_reginfo() fails err=%d\n", err));
+		AP6210_ERR("wl_construct_reginfo() fails err=%d\n", err);
 		if (err != BCME_UNSUPPORTED)
 			goto end_bands;
 		err = 0;
@@ -9313,7 +9315,7 @@ static s32 __wl_cfg80211_up(struct wl_priv *wl)
 	struct net_device *ndev = wl_to_prmry_ndev(wl);
 	struct wireless_dev *wdev = ndev->ieee80211_ptr;
 
-	WL_DBG(("In\n"));
+	AP6210_DEBUG("In\n");
 
 	err = dhd_config_dongle(wl, false);
 	if (unlikely(err))
@@ -9321,11 +9323,11 @@ static s32 __wl_cfg80211_up(struct wl_priv *wl)
 
 	err = wl_config_ifmode(wl, ndev, wdev->iftype);
 	if (unlikely(err && err != -EINPROGRESS)) {
-		WL_ERR(("wl_config_ifmode failed\n"));
+		AP6210_ERR("wl_config_ifmode failed\n");
 	}
 	err = wl_update_wiphybands(wl, true);
 	if (unlikely(err)) {
-		WL_ERR(("wl_update_wiphybands failed\n"));
+		AP6210_ERR("wl_update_wiphybands failed\n");
 	}
 
 	err = dhd_monitor_init(wl->pub);
@@ -9334,7 +9336,7 @@ static s32 __wl_cfg80211_up(struct wl_priv *wl)
 #ifdef WL_HOST_BAND_MGMT
 	/* By default the curr_band is initialized to BAND_AUTO */
 	if (wl_cfg80211_set_band(ndev, WLC_BAND_AUTO) < 0) {
-		WL_ERR(("roam_band set failed\n"));
+		AP6210_ERR("roam_band set failed\n");
 		err = -1;
 	}
 #endif /* WL_HOST_BAND_MGMT */
@@ -9359,7 +9361,7 @@ static s32 __wl_cfg80211_down(struct wl_priv *wl)
 	struct net_device *ndev = wl_to_prmry_ndev(wl);
 	struct net_device *p2p_net = wl->p2p_net;
 	u32 bssidx = wl_cfgp2p_find_idx(wl, ndev);
-	WL_DBG(("In\n"));
+	AP6210_DEBUG("In\n");
 
 #if defined(DHCP_SCAN_SUPPRESS)
 	/* Force clear of scan_suppress */
@@ -9373,7 +9375,7 @@ static s32 __wl_cfg80211_down(struct wl_priv *wl)
 	/* If BSS is operational (e.g SoftAp), bring it down */
 	if (wl_cfgp2p_bss_isup(ndev, bssidx)) {
 		if (wl_cfgp2p_bss(wl, ndev, bssidx, 0) < 0)
-			WL_ERR(("BSS down failed \n"));
+			AP6210_ERR("BSS down failed \n");
 	}
 
 	/* Check if cfg80211 interface is already down */
@@ -9423,22 +9425,22 @@ s32 wl_cfg80211_up(void *para)
 	dhd_pub_t *dhd;
 
 	(void)para;
-	WL_DBG(("In\n"));
+	AP6210_DEBUG("In\n");
 	wl = wlcfg_drv_priv;
 
 	if ((err = wldev_ioctl(wl_to_prmry_ndev(wl), WLC_GET_VERSION, &val,
 		sizeof(int), false) < 0)) {
-		WL_ERR(("WLC_GET_VERSION failed, err=%d\n", err));
+		AP6210_ERR("WLC_GET_VERSION failed, err=%d\n", err);
 		return err;
 	}
 	val = dtoh32(val);
 	if (val != WLC_IOCTL_VERSION && val != 1) {
-		WL_ERR(("Version mismatch, please upgrade. Got %d, expected %d or 1\n",
-			val, WLC_IOCTL_VERSION));
+		AP6210_ERR("Version mismatch, please upgrade. Got %d, expected %d or 1\n",
+			val, WLC_IOCTL_VERSION);
 		return BCME_VERSION;
 	}
 	ioctl_version = val;
-	WL_TRACE(("WLC_GET_VERSION=%d\n", ioctl_version));
+	AP6210_DEBUG("WLC_GET_VERSION=%d\n", ioctl_version);
 
 	mutex_lock(&wl->usr_sync);
 	dhd = (dhd_pub_t *)(wl->pub);
@@ -9449,7 +9451,7 @@ s32 wl_cfg80211_up(void *para)
 	}
 	err = __wl_cfg80211_up(wl);
 	if (unlikely(err))
-		WL_ERR(("__wl_cfg80211_up failed\n"));
+		AP6210_ERR("__wl_cfg80211_up failed\n");
 	mutex_unlock(&wl->usr_sync);
 	return err;
 }
@@ -9460,7 +9462,7 @@ int wl_cfg80211_hang(struct net_device *dev, u16 reason)
 	struct wl_priv *wl;
 	wl = wlcfg_drv_priv;
 
-	WL_ERR(("In : chip crash eventing\n"));
+	AP6210_ERR("In : chip crash eventing\n");
 	cfg80211_disconnected(dev, reason, NULL, 0, GFP_KERNEL);
 #if defined(RSSIAVG)
 	wl_free_rssi_cache(&g_rssi_cache_ctrl);
@@ -9481,7 +9483,7 @@ s32 wl_cfg80211_down(void *para)
 	s32 err = 0;
 
 	(void)para;
-	WL_DBG(("In\n"));
+	AP6210_DEBUG("In\n");
 	wl = wlcfg_drv_priv;
 	mutex_lock(&wl->usr_sync);
 #if defined(RSSIAVG)
@@ -9525,7 +9527,7 @@ static void *wl_read_prof(struct wl_priv *wl, struct net_device *ndev, s32 item)
 	}
 	spin_unlock_irqrestore(&wl->cfgdrv_lock, flags);
 	if (!rptr)
-		WL_ERR(("invalid item (%d)\n", item));
+		AP6210_ERR("invalid item (%d)\n", item);
 	return rptr;
 }
 
@@ -9576,7 +9578,7 @@ wl_update_prof(struct wl_priv *wl, struct net_device *ndev,
 	spin_unlock_irqrestore(&wl->cfgdrv_lock, flags);
 
 	if (err == EOPNOTSUPP)
-		WL_ERR(("unsupported item (%d)\n", item));
+		AP6210_ERR("unsupported item (%d)\n", item);
 
 	return err;
 }
@@ -9615,7 +9617,7 @@ static __used s32 wl_add_ie(struct wl_priv *wl, u8 t, u8 l, u8 *v)
 	s32 err = 0;
 
 	if (unlikely(ie->offset + l + 2 > WL_TLV_INFO_MAX)) {
-		WL_ERR(("ei crosses buffer boundary\n"));
+		AP6210_ERR("ei crosses buffer boundary\n");
 		return -ENOSPC;
 	}
 	ie->buf[ie->offset] = t;
@@ -9632,7 +9634,7 @@ static s32 wl_mrg_ie(struct wl_priv *wl, u8 *ie_stream, u16 ie_size)
 	s32 err = 0;
 
 	if (unlikely(ie->offset + ie_size > WL_TLV_INFO_MAX)) {
-		WL_ERR(("ei_stream crosses buffer boundary\n"));
+		AP6210_ERR("ei_stream crosses buffer boundary\n");
 		return -ENOSPC;
 	}
 	memcpy(&ie->buf[ie->offset], ie_stream, ie_size);
@@ -9647,7 +9649,7 @@ static s32 wl_cp_ie(struct wl_priv *wl, u8 *dst, u16 dst_size)
 	s32 err = 0;
 
 	if (unlikely(ie->offset > dst_size)) {
-		WL_ERR(("dst_size is not enough\n"));
+		AP6210_ERR("dst_size is not enough\n");
 		return -ENOSPC;
 	}
 	memcpy(dst, &ie->buf[0], ie->offset);
@@ -9671,7 +9673,7 @@ static void wl_link_down(struct wl_priv *wl)
 {
 	struct wl_connect_info *conn_info = wl_to_conn(wl);
 
-	WL_DBG(("In\n"));
+	AP6210_DEBUG("In\n");
 	wl->link_up = false;
 	conn_info->req_ie_len = 0;
 	conn_info->resp_ie_len = 0;
@@ -9837,8 +9839,8 @@ static int wl_rfkill_set(void *data, bool blocked)
 {
 	struct wl_priv *wl = (struct wl_priv *)data;
 
-	WL_DBG(("Enter \n"));
-	WL_DBG(("RF %s\n", blocked ? "blocked" : "unblocked"));
+	AP6210_DEBUG("Enter \n");
+	AP6210_DEBUG("RF %s\n", blocked ? "blocked" : "unblocked");
 
 	if (!wl)
 		return -EINVAL;
@@ -9852,7 +9854,7 @@ static int wl_setup_rfkill(struct wl_priv *wl, bool setup)
 {
 	s32 err = 0;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	if (!wl)
 		return -EINVAL;
 	if (setup) {
@@ -9921,7 +9923,7 @@ int wl_cfg80211_do_driver_init(struct net_device *net)
 void wl_cfg80211_enable_trace(u32 level)
 {
 	wl_dbg_level = level;
-	printk("%s: wl_dbg_level = 0x%x\n", __FUNCTION__, wl_dbg_level);
+	AP6210_DEBUG("%s: wl_dbg_level = 0x%x\n", __FUNCTION__, wl_dbg_level);
 }
 
 #if defined(WL_SUPPORT_BACKPORTED_KPATCHES) || (LINUX_VERSION_CODE >= KERNEL_VERSION(3, \
@@ -9969,7 +9971,7 @@ wl_cfg80211_add_iw_ie(struct wl_priv *wl, struct net_device *ndev, s32 bssidx, s
 	            VNDR_IE_ASSOCRSP_FLAG | VNDR_IE_AUTHRSP_FLAG |
 	            VNDR_IE_PRBREQ_FLAG | VNDR_IE_ASSOCREQ_FLAG|
 	            VNDR_IE_CUSTOM_FLAG))) {
-		WL_ERR(("cfg80211 Add IE: Invalid packet flag 0x%x\n", pktflag));
+		AP6210_ERR("cfg80211 Add IE: Invalid packet flag 0x%x\n", pktflag);
 		return -1;
 	}
 
@@ -9980,12 +9982,12 @@ wl_cfg80211_add_iw_ie(struct wl_priv *wl, struct net_device *ndev, s32 bssidx, s
 	ie_setbuf = (ie_setbuf_t *) kzalloc(buf_len, GFP_KERNEL);
 
 	if (!ie_setbuf) {
-		WL_ERR(("Error allocating buffer for IE\n"));
+		AP6210_ERR("Error allocating buffer for IE\n");
 		return -ENOMEM;
 	}
 
 	if (wl->iw_ie_len == data_len && !memcmp(wl->iw_ie, data, data_len)) {
-		WL_ERR(("Previous IW IE is equals to current IE\n"));
+		AP6210_ERR("Previous IW IE is equals to current IE\n");
 		return err;
 	}
 
@@ -10002,7 +10004,7 @@ wl_cfg80211_add_iw_ie(struct wl_priv *wl, struct net_device *ndev, s32 bssidx, s
 
 	/* if already set with previous values, delete it first */
 	if (wl->iw_ie_len != 0) {
-		WL_DBG(("Different IW_IE was already set. clear first\n"));
+		AP6210_DEBUG("Different IW_IE was already set. clear first\n");
 
 		ie_setbuf->ie_buffer.ie_list[0].ie_data.len = 0;
 
@@ -10041,17 +10043,17 @@ wl_cfg80211_set_band(struct net_device *ndev, int band)
 	char ioctl_buf[50];
 
 	if ((band < WLC_BAND_AUTO) || (band > WLC_BAND_2G)) {
-		WL_ERR(("Invalid band\n"));
+		AP6210_ERR("Invalid band\n");
 		return -EINVAL;
 	}
 
 	if ((ret = wldev_iovar_setbuf(ndev, "roam_band", &band,
 		sizeof(int), ioctl_buf, sizeof(ioctl_buf), NULL)) < 0) {
-		WL_ERR(("seting roam_band failed code=%d\n", ret));
+		AP6210_ERR("seting roam_band failed code=%d\n", ret);
 		return ret;
 	}
 
-	WL_DBG(("Setting band to %d\n", band));
+	AP6210_DEBUG("Setting band to %d\n", band);
 	wl->curr_band = band;
 
 	return 0;
@@ -10063,7 +10065,7 @@ static void wl_cfg80211_scan_supp_timerfunc(ulong data)
 {
 	struct wl_priv *wl = (struct wl_priv *)data;
 
-	WL_DBG(("Enter \n"));
+	AP6210_DEBUG("Enter \n");
 	schedule_work(&wl->wlan_work);
 }
 
@@ -10074,13 +10076,13 @@ static void wl_cfg80211_work_handler(struct work_struct *work)
 	wl = container_of(work, struct wl_priv, wlan_work);
 
 	if (!wl) {
-		WL_ERR(("wl_priv ptr NULL\n"));
+		AP6210_ERR("wl_priv ptr NULL\n");
 		return;
 	}
 
 	if (wl->scan_suppressed) {
 		/* There is pending scan_suppress. Clean it */
-		WL_ERR(("Clean up from timer after %d msec\n", WL_SCAN_SUPPRESS_TIMEOUT));
+		AP6210_ERR("Clean up from timer after %d msec\n", WL_SCAN_SUPPRESS_TIMEOUT);
 		wl_cfg80211_scan_suppress(wl_to_prmry_ndev(wl), 0);
 	}
 }
@@ -10094,7 +10096,7 @@ int wl_cfg80211_scan_suppress(struct net_device *dev, int suppress)
 		return -EINVAL;
 
 	if (suppress == wl->scan_suppressed) {
-		WL_DBG(("No change in scan_suppress state. Ignoring cmd..\n"));
+		AP6210_DEBUG("No change in scan_suppress state. Ignoring cmd..\n");
 		return 0;
 	}
 
@@ -10103,20 +10105,20 @@ int wl_cfg80211_scan_suppress(struct net_device *dev, int suppress)
 
 	if ((ret = wldev_ioctl(dev, WLC_SET_SCANSUPPRESS,
 		&suppress, sizeof(int), true)) < 0) {
-		WL_ERR(("Scan suppress setting failed ret:%d \n", ret));
+		AP6210_ERR("Scan suppress setting failed ret:%d \n", ret);
 	} else {
-		WL_DBG(("Scan suppress %s \n", suppress ? "Enabled" : "Disabled"));
+		AP6210_DEBUG("Scan suppress %s \n", suppress ? "Enabled" : "Disabled");
 		wl->scan_suppressed = suppress;
 	}
 
 	/* If scan_suppress is set, Start a timer to monitor it (just incase) */
 	if (wl->scan_suppressed) {
 		if (ret) {
-			WL_ERR(("Retry scan_suppress reset at a later time \n"));
+			AP6210_ERR("Retry scan_suppress reset at a later time \n");
 			mod_timer(&wl->scan_supp_timer,
 				jiffies + msecs_to_jiffies(WL_SCAN_SUPPRESS_RETRY));
 		} else {
-			WL_DBG(("Start wlan_timer to clear of scan_suppress \n"));
+			AP6210_DEBUG("Start wlan_timer to clear of scan_suppress \n");
 			mod_timer(&wl->scan_supp_timer,
 				jiffies + msecs_to_jiffies(WL_SCAN_SUPPRESS_TIMEOUT));
 		}

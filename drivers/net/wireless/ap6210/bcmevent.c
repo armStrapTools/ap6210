@@ -28,6 +28,7 @@
 #include <proto/ethernet.h>
 #include <proto/bcmeth.h>
 #include <proto/bcmevent.h>
+#include <ap6210.h>
 
 #if WLC_E_LAST != 107
 #error "You need to add an entry to bcmevent_names[] for the new event"

@@ -37,6 +37,8 @@
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio_ids.h>
 
+#include <ap6210.h>
+
 #if !defined(SDIO_VENDOR_ID_BROADCOM)
 #define SDIO_VENDOR_ID_BROADCOM		0x02d0
 #endif /* !defined(SDIO_VENDOR_ID_BROADCOM) */
@@ -111,11 +113,11 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 	static struct sdio_func sdio_func_0;
 
 	if (func) {
-		sd_trace(("bcmsdh_sdmmc: %s Enter\n", __FUNCTION__));
-		sd_trace(("sdio_bcmsdh: func->class=%x\n", func->class));
-		sd_trace(("sdio_vendor: 0x%04x\n", func->vendor));
-		sd_trace(("sdio_device: 0x%04x\n", func->device));
-		sd_trace(("Function#: 0x%04x\n", func->num));
+		AP6210_DEBUG("bcmsdh_sdmmc: %s Enter\n", __FUNCTION__);
+		AP6210_DEBUG("sdio_bcmsdh: func->class=%x\n", func->class);
+		AP6210_DEBUG("sdio_vendor: 0x%04x\n", func->vendor);
+		AP6210_DEBUG("sdio_device: 0x%04x\n", func->device);
+		AP6210_DEBUG("Function#: 0x%04x\n", func->num);
 
 		if (func->num == 1) {
 			sdio_func_0.num = 0;
@@ -123,7 +125,7 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 			gInstance->func[0] = &sdio_func_0;
 			if(func->device == 0x4) { /* 4318 */
 				gInstance->func[2] = NULL;
-				sd_trace(("NIC found, calling bcmsdh_probe...\n"));
+				AP6210_DEBUG("NIC found, calling bcmsdh_probe...\n");
 				ret = bcmsdh_probe(&func->dev);
 			}
 		}
@@ -134,7 +136,7 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 	#ifdef WL_CFG80211
 			wl_cfg80211_set_parent_dev(&func->dev);
 	#endif
-			sd_trace(("F2 found, calling bcmsdh_probe...\n"));
+			AP6210_DEBUG("F2 found, calling bcmsdh_probe...\n");
 			ret = bcmsdh_probe(&func->dev);
 		}
 	} else {
@@ -147,14 +149,14 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 static void bcmsdh_sdmmc_remove(struct sdio_func *func)
 {
 	if (func) {
-		sd_trace(("bcmsdh_sdmmc: %s Enter\n", __FUNCTION__));
-		sd_info(("sdio_bcmsdh: func->class=%x\n", func->class));
-		sd_info(("sdio_vendor: 0x%04x\n", func->vendor));
-		sd_info(("sdio_device: 0x%04x\n", func->device));
-		sd_info(("Function#: 0x%04x\n", func->num));
+		AP6210_DEBUG("bcmsdh_sdmmc: %s Enter\n", __FUNCTION__);
+		AP6210_DEBUG("sdio_bcmsdh: func->class=%x\n", func->class);
+		AP6210_DEBUG("sdio_vendor: 0x%04x\n", func->vendor);
+		AP6210_DEBUG("sdio_device: 0x%04x\n", func->device);
+		AP6210_DEBUG("Function#: 0x%04x\n", func->num);
 
 		if (gInstance->func[2]) {
-			sd_trace(("F2 found, calling bcmsdh_remove...\n"));
+			AP6210_DEBUG("F2 found, calling bcmsdh_remove...\n");
 			bcmsdh_remove(&func->dev);
 			gInstance->func[2] = NULL;
 		}
@@ -194,7 +196,7 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 	if (func->num != 2)
 		return 0;
 
-	sd_trace(("%s Enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s Enter\n", __FUNCTION__);
 
 	if (dhd_os_check_wakelock(bcmsdh_get_drvdata()))
 		return -EBUSY;
@@ -202,14 +204,14 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 	sdio_flags = sdio_get_host_pm_caps(func);
 
 	if (!(sdio_flags & MMC_PM_KEEP_POWER)) {
-		sd_err(("%s: can't keep power while host is suspended\n", __FUNCTION__));
+		AP6210_ERR("%s: can't keep power while host is suspended\n", __FUNCTION__);
 		return  -EINVAL;
 	}
 
 	/* keep power while host suspended */
 	ret = sdio_set_host_pm_flags(func, MMC_PM_KEEP_POWER);
 	if (ret) {
-		sd_err(("%s: error while trying to keep power\n", __FUNCTION__));
+		AP6210_ERR("%s: error while trying to keep power\n", __FUNCTION__);
 		return ret;
 	}
 
@@ -227,7 +229,7 @@ static int bcmsdh_sdmmc_resume(struct device *pdev)
 #if defined(OOB_INTR_ONLY)
 	struct sdio_func *func = dev_to_sdio_func(pdev);
 #endif /* defined(OOB_INTR_ONLY) */
-	sd_trace(("%s Enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s Enter\n", __FUNCTION__);
 
 	dhd_mmc_suspend = FALSE;
 #if defined(OOB_INTR_ONLY)
@@ -337,14 +339,14 @@ sdioh_interrupt_set(sdioh_info_t *sd, bool enable)
 	if (!sd)
 		return BCME_BADARG;
 
-	sd_trace(("%s: %s\n", __FUNCTION__, enable ? "Enabling" : "Disabling"));
+	AP6210_DEBUG("%s: %s\n", __FUNCTION__, enable ? "Enabling" : "Disabling");
 
 	sdos = (struct sdos_info *)sd->sdos_info;
 	ASSERT(sdos);
 
 #if !defined(OOB_INTR_ONLY)
 	if (enable && !(sd->intr_handler && sd->intr_handler_arg)) {
-		sd_err(("%s: no handler registered, will not enable\n", __FUNCTION__));
+		AP6210_ERR("%s: no handler registered, will not enable\n", __FUNCTION__);
 		return SDIOH_API_RC_FAIL;
 	}
 #endif /* !defined(OOB_INTR_ONLY) */
@@ -394,7 +396,7 @@ MODULE_AUTHOR(AUTHOR);
 int sdio_function_init(void)
 {
 	int error = 0;
-	sd_trace(("bcmsdh_sdmmc: %s Enter\n", __FUNCTION__));
+	AP6210_DEBUG("bcmsdh_sdmmc: %s Enter\n", __FUNCTION__);
 
 	gInstance = kzalloc(sizeof(BCMSDH_SDMMC_INSTANCE), GFP_KERNEL);
 	if (!gInstance)
@@ -415,7 +417,7 @@ int sdio_function_init(void)
 extern int bcmsdh_remove(struct device *dev);
 void sdio_function_cleanup(void)
 {
-	sd_trace(("%s Enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s Enter\n", __FUNCTION__);
 
 
 	sdio_unregister_driver(&bcmsdh_sdmmc_driver);

@@ -57,7 +57,7 @@ pkt_frag_t pkt_frag_info(osl_t *osh, void *p)
 
 	/* Process Ethernet II or SNAP-encapsulated 802.3 frames */
 	if (length < ETHER_HDR_LEN) {
-		DHD_INFO(("%s: short eth frame (%d)\n", __FUNCTION__, length));
+		AP6210_DEBUG("%s: short eth frame (%d)\n", __FUNCTION__, length);
 		return DHD_PKT_FRAG_NONE;
 	} else if (ntoh16(*(uint16 *)(frame + ETHER_TYPE_OFFSET)) >= ETHER_TYPE_MIN) {
 		/* Frame is Ethernet II */
@@ -66,7 +66,7 @@ pkt_frag_t pkt_frag_info(osl_t *osh, void *p)
 	           !bcmp(llc_snap_hdr, frame + ETHER_HDR_LEN, SNAP_HDR_LEN)) {
 		pt = frame + ETHER_HDR_LEN + SNAP_HDR_LEN;
 	} else {
-		DHD_INFO(("%s: non-SNAP 802.3 frame\n", __FUNCTION__));
+		AP6210_DEBUG("%s: non-SNAP 802.3 frame\n", __FUNCTION__);
 		return DHD_PKT_FRAG_NONE;
 	}
 
@@ -77,7 +77,7 @@ pkt_frag_t pkt_frag_info(osl_t *osh, void *p)
 		pt += VLAN_TAG_LEN;
 
 		if (pt + ETHER_TYPE_LEN > frame + length) {
-			DHD_INFO(("%s: short VLAN frame (%d)\n", __FUNCTION__, length));
+			AP6210_DEBUG("%s: short VLAN frame (%d)\n", __FUNCTION__, length);
 			return DHD_PKT_FRAG_NONE;
 		}
 
@@ -85,8 +85,8 @@ pkt_frag_t pkt_frag_info(osl_t *osh, void *p)
 	}
 
 	if (ethertype != ETHER_TYPE_IP) {
-		DHD_INFO(("%s: non-IP frame (ethertype 0x%x, length %d)\n",
-			__FUNCTION__, ethertype, length));
+		AP6210_DEBUG("%s: non-IP frame (ethertype 0x%x, length %d)\n",
+			__FUNCTION__, ethertype, length);
 		return DHD_PKT_FRAG_NONE;
 	}
 
@@ -95,7 +95,7 @@ pkt_frag_t pkt_frag_info(osl_t *osh, void *p)
 
 	/* We support IPv4 only */
 	if ((ipl < IPV4_OPTIONS_OFFSET) || (IP_VER(iph) != IP_VER_4)) {
-		DHD_INFO(("%s: short frame (%d) or non-IPv4\n", __FUNCTION__, ipl));
+		AP6210_DEBUG("%s: short frame (%d) or non-IPv4\n", __FUNCTION__, ipl);
 		return DHD_PKT_FRAG_NONE;
 	}
 

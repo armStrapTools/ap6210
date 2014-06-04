@@ -135,37 +135,6 @@ enum wl_cfgp2p_status {
 /* dword align allocation */
 #define WLC_IOCTL_MAXLEN 8192
 
-#define CFGP2P_ERROR_TEXT		"CFGP2P-ERROR) "
-
-#define CFGP2P_ERR(args)									\
-	do {										\
-		if (wl_dbg_level & WL_DBG_ERR) {				\
-			printk(KERN_INFO CFGP2P_ERROR_TEXT "%s : ", __func__);	\
-			printk args;						\
-		}									\
-	} while (0)
-#define	CFGP2P_INFO(args)									\
-	do {										\
-		if (wl_dbg_level & WL_DBG_INFO) {				\
-			printk(KERN_INFO "CFGP2P-INFO) %s : ", __func__);	\
-			printk args;						\
-		}									\
-	} while (0)
-#define	CFGP2P_DBG(args)								\
-	do {									\
-		if (wl_dbg_level & WL_DBG_DBG) {			\
-			printk(KERN_INFO "CFGP2P-DEBUG) %s :", __func__);	\
-			printk args;							\
-		}									\
-	} while (0)
-
-#define	CFGP2P_ACTION(args)								\
-	do {									\
-		if (wl_dbg_level & WL_DBG_P2P_ACTION) {			\
-			printk(KERN_INFO "CFGP2P-ACTION) %s :", __func__);	\
-			printk args;							\
-		}									\
-	} while (0)
 #define INIT_TIMER(timer, func, duration, extra_delay)	\
 	do {				   \
 		init_timer(timer); \

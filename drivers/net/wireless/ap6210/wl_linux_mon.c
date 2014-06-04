@@ -40,6 +40,8 @@
 #include <dngl_stats.h>
 #include <dhd.h>
 
+#include <ap6210.h>
+
 typedef enum monitor_states
 {
 	MONITOR_STATE_DEINIT = 0x0,
@@ -59,8 +61,6 @@ int dhd_monitor_uninit(void);
 #ifndef DHD_MAX_IFS
 #define DHD_MAX_IFS 16
 #endif
-#define MON_PRINT(format, ...) printk("DHD-MON: %s " format, __func__, ##__VA_ARGS__)
-#define MON_TRACE MON_PRINT
 
 typedef struct monitor_interface {
 	int radiotap_enabled;
@@ -158,7 +158,7 @@ static int dhd_mon_if_open(struct net_device *ndev)
 {
 	int ret = 0;
 
-	MON_PRINT("enter\n");
+	AP6210_DEBUG("enter\n");
 	return ret;
 }
 
@@ -166,7 +166,7 @@ static int dhd_mon_if_stop(struct net_device *ndev)
 {
 	int ret = 0;
 
-	MON_PRINT("enter\n");
+	AP6210_DEBUG("enter\n");
 	return ret;
 }
 
@@ -185,11 +185,11 @@ static int dhd_mon_if_subif_start_xmit(struct sk_buff *skb, struct net_device *n
 	struct ieee80211_radiotap_header *rtap_hdr;
 	monitor_interface* mon_if;
 
-	MON_PRINT("enter\n");
+	AP6210_DEBUG("enter\n");
 
 	mon_if = ndev_to_monif(ndev);
 	if (mon_if == NULL || mon_if->real_ndev == NULL) {
-		MON_PRINT(" cannot find matched net dev, skip the packet\n");
+		AP6210_DEBUG(" cannot find matched net dev, skip the packet\n");
 		goto fail;
 	}
 
@@ -204,7 +204,7 @@ static int dhd_mon_if_subif_start_xmit(struct sk_buff *skb, struct net_device *n
 	if (unlikely(skb->len < rtap_len))
 		goto fail;
 
-	MON_PRINT("radiotap len (should be 14): %d\n", rtap_len);
+	AP6210_DEBUG("radiotap len (should be 14): %d\n", rtap_len);
 
 	/* Skip the ratio tap header */
 	skb_pull(skb, rtap_len);
@@ -233,7 +233,7 @@ static int dhd_mon_if_subif_start_xmit(struct sk_buff *skb, struct net_device *n
 		memcpy(pdata + sizeof(dst_mac_addr), src_mac_addr, sizeof(src_mac_addr));
 		PKTSETPRIO(skb, 0);
 
-		MON_PRINT("if name: %s, matched if name %s\n", ndev->name, mon_if->real_ndev->name);
+		AP6210_DEBUG("if name: %s, matched if name %s\n", ndev->name, mon_if->real_ndev->name);
 
 		/* Use the real net device to transmit the packet */
 		ret = dhd_start_xmit(skb, mon_if->real_ndev);
@@ -251,9 +251,9 @@ static void dhd_mon_if_set_multicast_list(struct net_device *ndev)
 
 	mon_if = ndev_to_monif(ndev);
 	if (mon_if == NULL || mon_if->real_ndev == NULL) {
-		MON_PRINT(" cannot find matched net dev, skip the packet\n");
+		AP6210_DEBUG(" cannot find matched net dev, skip the packet\n");
 	} else {
-		MON_PRINT("enter, if name: %s, matched if name %s\n",
+		AP6210_DEBUG("enter, if name: %s, matched if name %s\n",
 		ndev->name, mon_if->real_ndev->name);
 	}
 }
@@ -265,9 +265,9 @@ static int dhd_mon_if_change_mac(struct net_device *ndev, void *addr)
 
 	mon_if = ndev_to_monif(ndev);
 	if (mon_if == NULL || mon_if->real_ndev == NULL) {
-		MON_PRINT(" cannot find matched net dev, skip the packet\n");
+		AP6210_DEBUG(" cannot find matched net dev, skip the packet\n");
 	} else {
-		MON_PRINT("enter, if name: %s, matched if name %s\n",
+		AP6210_DEBUG("enter, if name: %s, matched if name %s\n",
 		ndev->name, mon_if->real_ndev->name);
 	}
 	return ret;
@@ -287,9 +287,9 @@ int dhd_add_monitor(char *name, struct net_device **new_ndev)
 
 	mutex_lock(&g_monitor.lock);
 
-	MON_TRACE("enter, if name: %s\n", name);
+	AP6210_DEBUG("enter, if name: %s\n", name);
 	if (!name || !new_ndev) {
-		MON_PRINT("invalid parameters\n");
+		AP6210_DEBUG("invalid parameters\n");
 		ret = -EINVAL;
 		goto out;
 	}
@@ -303,14 +303,14 @@ int dhd_add_monitor(char *name, struct net_device **new_ndev)
 			break;
 		}
 	if (idx == -1) {
-		MON_PRINT("exceeds maximum interfaces\n");
+		AP6210_DEBUG("exceeds maximum interfaces\n");
 		ret = -EFAULT;
 		goto out;
 	}
 
 	ndev = alloc_etherdev(sizeof(dhd_linux_monitor_t*));
 	if (!ndev) {
-		MON_PRINT("failed to allocate memory\n");
+		AP6210_DEBUG("failed to allocate memory\n");
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -322,7 +322,7 @@ int dhd_add_monitor(char *name, struct net_device **new_ndev)
 
 	ret = register_netdevice(ndev);
 	if (ret) {
-		MON_PRINT(" register_netdevice failed (%d)\n", ret);
+		AP6210_DEBUG(" register_netdevice failed (%d)\n", ret);
 		goto out;
 	}
 
@@ -333,8 +333,8 @@ int dhd_add_monitor(char *name, struct net_device **new_ndev)
 	dhd_mon = (dhd_linux_monitor_t **)netdev_priv(ndev);
 	*dhd_mon = &g_monitor;
 	g_monitor.monitor_state = MONITOR_STATE_INTERFACE_ADDED;
-	MON_PRINT("net device returned: 0x%p\n", ndev);
-	MON_PRINT("found a matched net device, name %s\n", g_monitor.mon_if[idx].real_ndev->name);
+	AP6210_DEBUG("net device returned: 0x%p\n", ndev);
+	AP6210_DEBUG("found a matched net device, name %s\n", g_monitor.mon_if[idx].real_ndev->name);
 
 out:
 	if (ret && ndev)
@@ -374,7 +374,7 @@ int dhd_del_monitor(struct net_device *ndev)
 
 	if (g_monitor.monitor_state !=
 	MONITOR_STATE_INTERFACE_DELETED)
-		MON_PRINT("interface not found in monitor IF array, is this a monitor IF? 0x%p\n",
+		AP6210_DEBUG("interface not found in monitor IF array, is this a monitor IF? 0x%p\n",
 			ndev);
 	mutex_unlock(&g_monitor.lock);
 

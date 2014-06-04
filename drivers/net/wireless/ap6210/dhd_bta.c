@@ -178,19 +178,19 @@ dhd_bta_docmd(dhd_pub_t *pub, void *cmd_buf, uint cmd_len)
 	int status;
 
 	if (cmd_len < HCI_CMD_PREAMBLE_SIZE) {
-		DHD_ERROR(("dhd_bta_docmd: short command, cmd_len %u\n", cmd_len));
+		AP6210_ERR("dhd_bta_docmd: short command, cmd_len %u\n", cmd_len);
 		return BCME_BADLEN;
 	}
 
 	if ((len = (uint)cmd->plen + HCI_CMD_PREAMBLE_SIZE) > cmd_len) {
-		DHD_ERROR(("dhd_bta_docmd: malformed command, len %u cmd_len %u\n",
-		           len, cmd_len));
+		AP6210_ERR("dhd_bta_docmd: malformed command, len %u cmd_len %u\n",
+		           len, cmd_len);
 		/* return BCME_BADLEN; */
 	}
 
 	p = PKTGET(osh, pub->hdrlen + RFC1042_HDR_LEN + len, TRUE);
 	if (p == NULL) {
-		DHD_ERROR(("dhd_bta_docmd: out of memory\n"));
+		AP6210_ERR("dhd_bta_docmd: out of memory\n");
 		return BCME_NOMEM;
 	}
 
@@ -232,19 +232,19 @@ dhd_bta_tx_hcidata(dhd_pub_t *pub, void *data_buf, uint data_len)
 	void *p;
 
 	if (data_len < HCI_ACL_DATA_PREAMBLE_SIZE) {
-		DHD_ERROR(("dhd_bta_tx_hcidata: short data_buf, data_len %u\n", data_len));
+		AP6210_ERR("dhd_bta_tx_hcidata: short data_buf, data_len %u\n", data_len);
 		return BCME_BADLEN;
 	}
 
 	if ((len = (uint)ltoh16(data->dlen) + HCI_ACL_DATA_PREAMBLE_SIZE) > data_len) {
-		DHD_ERROR(("dhd_bta_tx_hcidata: malformed hci data, len %u data_len %u\n",
-		           len, data_len));
+		AP6210_ERR("dhd_bta_tx_hcidata: malformed hci data, len %u data_len %u\n",
+		           len, data_len);
 		/* return BCME_BADLEN; */
 	}
 
 	p = PKTGET(osh, pub->hdrlen + RFC1042_HDR_LEN + len, TRUE);
 	if (p == NULL) {
-		DHD_ERROR(("dhd_bta_tx_hcidata: out of memory\n"));
+		AP6210_ERR("dhd_bta_tx_hcidata: out of memory\n");
 		return BCME_NOMEM;
 	}
 

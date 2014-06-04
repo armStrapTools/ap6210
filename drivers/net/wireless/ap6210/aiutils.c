@@ -33,8 +33,10 @@
 #include <hndsoc.h>
 #include <sbchipc.h>
 #include <pcicfg.h>
-
+#include <ap6210.h>
 #include "siutils_priv.h"
+
+#include <ap6210.h>
 
 #define BCM47162_DMP() (0)
 #define BCM5357_DMP() (0)
@@ -70,9 +72,9 @@ get_erom_ent(si_t *sih, uint32 **eromptr, uint32 mask, uint32 match)
 		nom++;
 	}
 
-	SI_VMSG(("%s: Returning ent 0x%08x\n", __FUNCTION__, ent));
+	AP6210_DEBUG("%s: Returning ent 0x%08x\n", __FUNCTION__, ent);
 	if (inv + nom) {
-		SI_VMSG(("  after %d invalid and %d non-matching entries\n", inv, nom));
+		AP6210_DEBUG("  after %d invalid and %d non-matching entries\n", inv, nom);
 	}
 	return ent;
 }
@@ -106,8 +108,8 @@ get_asd(si_t *sih, uint32 **eromptr, uint sp, uint ad, uint st, uint32 *addrl, u
 	} else
 		*sizel = AD_SZ_BASE << (sz >> AD_SZ_SHIFT);
 
-	SI_VMSG(("  SP %d, ad %d: st = %d, 0x%08x_0x%08x @ 0x%08x_0x%08x\n",
-	        sp, ad, st, *sizeh, *sizel, *addrh, *addrl));
+	AP6210_DEBUG("  SP %d, ad %d: st = %d, 0x%08x_0x%08x @ 0x%08x_0x%08x\n",
+	        sp, ad, st, *sizeh, *sizel, *addrh, *addrl);
 
 	return asd;
 }
@@ -149,14 +151,14 @@ ai_scan(si_t *sih, void *regs, uint devid)
 
 	case PCMCIA_BUS:
 	default:
-		SI_ERROR(("Don't know how to do AXI enumertion on bus %d\n", sih->bustype));
+		AP6210_ERR("Don't know how to do AXI enumertion on bus %d\n", sih->bustype);
 		ASSERT(0);
 		return;
 	}
 	eromlim = eromptr + (ER_REMAPCONTROL / sizeof(uint32));
 
-	SI_VMSG(("ai_scan: regs = 0x%p, erombase = 0x%08x, eromptr = 0x%p, eromlim = 0x%p\n",
-	         regs, erombase, eromptr, eromlim));
+	AP6210_DEBUG("ai_scan: regs = 0x%p, erombase = 0x%08x, eromptr = 0x%p, eromlim = 0x%p\n",
+	         regs, erombase, eromptr, eromlim);
 	while (eromptr < eromlim) {
 		uint32 cia, cib, cid, mfg, crev, nmw, nsw, nmp, nsp;
 		uint32 mpd, asd, addrl, addrh, sizel, sizeh;
@@ -168,7 +170,7 @@ ai_scan(si_t *sih, void *regs, uint devid)
 		/* Grok a component */
 		cia = get_erom_ent(sih, &eromptr, ER_TAG, ER_CI);
 		if (cia == (ER_END | ER_VALID)) {
-			SI_VMSG(("Found END of erom after %d cores\n", sii->numcores));
+			AP6210_DEBUG("Found END of erom after %d cores\n", sii->numcores);
 			ai_hwfixup(sii);
 			return;
 		}
@@ -176,7 +178,7 @@ ai_scan(si_t *sih, void *regs, uint devid)
 		cib = get_erom_ent(sih, &eromptr, 0, 0);
 
 		if ((cib & ER_TAG) != ER_CI) {
-			SI_ERROR(("CIA not followed by CIB\n"));
+			AP6210_ERR("CIA not followed by CIB\n");
 			goto error;
 		}
 
@@ -189,9 +191,9 @@ ai_scan(si_t *sih, void *regs, uint devid)
 		nsp = (cib & CIB_NSP_MASK) >> CIB_NSP_SHIFT;
 
 #ifdef BCMDBG_SI
-		SI_VMSG(("Found component 0x%04x/0x%04x rev %d at erom addr 0x%p, with nmw = %d, "
+		AP6210_DEBUG("Found component 0x%04x/0x%04x rev %d at erom addr 0x%p, with nmw = %d, "
 		         "nsw = %d, nmp = %d & nsp = %d\n",
-		         mfg, cid, crev, eromptr - 1, nmw, nsw, nmp, nsp));
+		         mfg, cid, crev, eromptr - 1, nmw, nsw, nmp, nsp);
 #else
 		BCM_REFERENCE(crev);
 #endif
@@ -220,12 +222,12 @@ ai_scan(si_t *sih, void *regs, uint devid)
 		for (i = 0; i < nmp; i++) {
 			mpd = get_erom_ent(sih, &eromptr, ER_VALID, ER_VALID);
 			if ((mpd & ER_TAG) != ER_MP) {
-				SI_ERROR(("Not enough MP entries for component 0x%x\n", cid));
+				AP6210_ERR("Not enough MP entries for component 0x%x\n", cid);
 				goto error;
 			}
-			SI_VMSG(("  Master port %d, mp: %d id: %d\n", i,
+			AP6210_DEBUG("  Master port %d, mp: %d id: %d\n", i,
 			         (mpd & MPD_MP_MASK) >> MPD_MP_SHIFT,
-			         (mpd & MPD_MUI_MASK) >> MPD_MUI_SHIFT));
+			         (mpd & MPD_MUI_MASK) >> MPD_MUI_SHIFT);
 		}
 
 		/* First Slave Address Descriptor should be port 0:
@@ -245,11 +247,11 @@ ai_scan(si_t *sih, void *regs, uint devid)
 					}
 					else if ((addrh != 0) || (sizeh != 0) ||
 						(sizel != SI_CORE_SIZE)) {
-						SI_ERROR(("addrh = 0x%x\t sizeh = 0x%x\t size1 ="
-							"0x%x\n", addrh, sizeh, sizel));
-						SI_ERROR(("First Slave ASD for"
+						AP6210_ERR("addrh = 0x%x\t sizeh = 0x%x\t size1 ="
+							"0x%x\n", addrh, sizeh, sizel);
+						AP6210_ERR("First Slave ASD for"
 							"core 0x%04x malformed "
-					          "(0x%08x)\n", cid, asd));
+					          "(0x%08x)\n", cid, asd);
 					goto error;
 				}
 		}
@@ -281,7 +283,7 @@ ai_scan(si_t *sih, void *regs, uint devid)
 				j++;
 			} while (1);
 			if (j == 0) {
-				SI_ERROR((" SP %d has no address descriptors\n", i));
+				AP6210_ERR(" SP %d has no address descriptors\n", i);
 				goto error;
 			}
 		}
@@ -291,11 +293,11 @@ ai_scan(si_t *sih, void *regs, uint devid)
 			asd = get_asd(sih, &eromptr, i, 0, AD_ST_MWRAP, &addrl, &addrh,
 			              &sizel, &sizeh);
 			if (asd == 0) {
-				SI_ERROR(("Missing descriptor for MW %d\n", i));
+				AP6210_ERR("Missing descriptor for MW %d\n", i);
 				goto error;
 			}
 			if ((sizeh != 0) || (sizel != SI_CORE_SIZE)) {
-				SI_ERROR(("Master wrapper %d is not 4KB\n", i));
+				AP6210_ERR("Master wrapper %d is not 4KB\n", i);
 				goto error;
 			}
 			if (i == 0)
@@ -308,11 +310,11 @@ ai_scan(si_t *sih, void *regs, uint devid)
 			asd = get_asd(sih, &eromptr, fwp + i, 0, AD_ST_SWRAP, &addrl, &addrh,
 			              &sizel, &sizeh);
 			if (asd == 0) {
-				SI_ERROR(("Missing descriptor for SW %d\n", i));
+				AP6210_ERR("Missing descriptor for SW %d\n", i);
 				goto error;
 			}
 			if ((sizeh != 0) || (sizel != SI_CORE_SIZE)) {
-				SI_ERROR(("Slave wrapper %d is not 4KB\n", i));
+				AP6210_ERR("Slave wrapper %d is not 4KB\n", i);
 				goto error;
 			}
 			if ((nmw == 0) && (i == 0))
@@ -328,7 +330,7 @@ ai_scan(si_t *sih, void *regs, uint devid)
 		sii->numcores++;
 	}
 
-	SI_ERROR(("Reached end of erom without finding END"));
+	AP6210_ERR("Reached end of erom without finding END");
 
 error:
 	sii->numcores = 0;
@@ -467,7 +469,7 @@ ai_coreaddrspaceX(si_t *sih, uint asidx, uint32 *addr, uint32 *size)
 		} while (1);
 
 		if (j == 0) {
-			SI_ERROR((" SP %d has no address descriptors\n", i));
+			AP6210_ERR(" SP %d has no address descriptors\n", i);
 			break;
 		}
 	}
@@ -499,8 +501,8 @@ ai_addrspace(si_t *sih, uint asidx)
 	else if (asidx == 1)
 		return sii->coresba2[cidx];
 	else {
-		SI_ERROR(("%s: Need to parse the erom again to find addr space %d\n",
-		          __FUNCTION__, asidx));
+		AP6210_ERR("%s: Need to parse the erom again to find addr space %d\n",
+		          __FUNCTION__, asidx);
 		return 0;
 	}
 }
@@ -520,8 +522,8 @@ ai_addrspacesize(si_t *sih, uint asidx)
 	else if (asidx == 1)
 		return sii->coresba2_size[cidx];
 	else {
-		SI_ERROR(("%s: Need to parse the erom again to find addr space %d\n",
-		          __FUNCTION__, asidx));
+		AP6210_ERR("%s: Need to parse the erom again to find addr space %d\n",
+		          __FUNCTION__, asidx);
 		return 0;
 	}
 }
@@ -534,11 +536,11 @@ ai_flag(si_t *sih)
 
 	sii = SI_INFO(sih);
 	if (BCM47162_DMP()) {
-		SI_ERROR(("%s: Attempting to read MIPS DMP registers on 47162a0", __FUNCTION__));
+		AP6210_ERR("%s: Attempting to read MIPS DMP registers on 47162a0", __FUNCTION__);
 		return sii->curidx;
 	}
 	if (BCM5357_DMP()) {
-		SI_ERROR(("%s: Attempting to read USB20H DMP registers on 5357b0\n", __FUNCTION__));
+		AP6210_ERR("%s: Attempting to read USB20H DMP registers on 5357b0\n", __FUNCTION__);
 		return sii->curidx;
 	}
 	ai = sii->curwrap;
@@ -784,13 +786,13 @@ ai_core_cflags_wo(si_t *sih, uint32 mask, uint32 val)
 	sii = SI_INFO(sih);
 
 	if (BCM47162_DMP()) {
-		SI_ERROR(("%s: Accessing MIPS DMP register (ioctrl) on 47162a0",
-		          __FUNCTION__));
+		AP6210_ERR("%s: Accessing MIPS DMP register (ioctrl) on 47162a0",
+		          __FUNCTION__);
 		return;
 	}
 	if (BCM5357_DMP()) {
-		SI_ERROR(("%s: Accessing USB20H DMP register (ioctrl) on 5357\n",
-		          __FUNCTION__));
+		AP6210_ERR("%s: Accessing USB20H DMP register (ioctrl) on 5357\n",
+		          __FUNCTION__);
 		return;
 	}
 
@@ -814,13 +816,13 @@ ai_core_cflags(si_t *sih, uint32 mask, uint32 val)
 
 	sii = SI_INFO(sih);
 	if (BCM47162_DMP()) {
-		SI_ERROR(("%s: Accessing MIPS DMP register (ioctrl) on 47162a0",
-		          __FUNCTION__));
+		AP6210_ERR("%s: Accessing MIPS DMP register (ioctrl) on 47162a0",
+		          __FUNCTION__);
 		return 0;
 	}
 	if (BCM5357_DMP()) {
-		SI_ERROR(("%s: Accessing USB20H DMP register (ioctrl) on 5357\n",
-		          __FUNCTION__));
+		AP6210_ERR("%s: Accessing USB20H DMP register (ioctrl) on 5357\n",
+		          __FUNCTION__);
 		return 0;
 	}
 
@@ -846,13 +848,13 @@ ai_core_sflags(si_t *sih, uint32 mask, uint32 val)
 
 	sii = SI_INFO(sih);
 	if (BCM47162_DMP()) {
-		SI_ERROR(("%s: Accessing MIPS DMP register (iostatus) on 47162a0",
-		          __FUNCTION__));
+		AP6210_ERR("%s: Accessing MIPS DMP register (iostatus) on 47162a0",
+		          __FUNCTION__);
 		return 0;
 	}
 	if (BCM5357_DMP()) {
-		SI_ERROR(("%s: Accessing USB20H DMP register (iostatus) on 5357\n",
-		          __FUNCTION__));
+		AP6210_ERR("%s: Accessing USB20H DMP register (iostatus) on 5357\n",
+		          __FUNCTION__);
 		return 0;
 	}
 

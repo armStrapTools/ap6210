@@ -53,6 +53,7 @@ extern void dhdsdio_isr(void * args);
 #include <plat/sys_config.h>
 #endif 
 
+#include <ap6210.h>
 
 /**
  * SDIO Host Controller info
@@ -82,9 +83,6 @@ static bcmsdh_hc_t *sdhcinfo = NULL;
 
 /* driver info, initialized when bcmsdh_register is called */
 static bcmsdh_driver_t drvinfo = {NULL, NULL};
-
-/* debugging macros */
-#define SDLX_MSG(x) printf x
 
 /**
  * Checks to see if vendor and device IDs match a supported SDIO Host Controller.
@@ -127,7 +125,7 @@ bcmsdh_chipmatch(uint16 vendor, uint16 device)
 #ifdef BCMSDIOH_SPI
 	/* This is the PciSpiHost. */
 	if (device == SPIH_FPGA_ID && vendor == VENDOR_BROADCOM) {
-		printf("Found PCI SPI Host Controller\n");
+		AP6210_ERR("Found PCI SPI Host Controller\n");
 		return (TRUE);
 	}
 
@@ -191,19 +189,19 @@ int bcmsdh_probe(struct device *dev)
 	irq_flags |= IRQF_NO_SUSPEND;
 #endif /* defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_CAPRI) */
 	if  (irq < 0) {
-		SDLX_MSG(("%s: Host irq is not defined\n", __FUNCTION__));
+		AP6210_ERR("%s: Host irq is not defined\n", __FUNCTION__);
 		return 1;
 	}
 #endif 
 	/* allocate SDIO Host Controller state info */
 	if (!(osh = osl_attach(dev, PCI_BUS, FALSE))) {
-		SDLX_MSG(("%s: osl_attach failed\n", __FUNCTION__));
+		AP6210_ERR("%s: osl_attach failed\n", __FUNCTION__);
 		goto err;
 	}
 	if (!(sdhc = MALLOC(osh, sizeof(bcmsdh_hc_t)))) {
-		SDLX_MSG(("%s: out of memory, allocated %d bytes\n",
+		AP6210_ERR("%s: out of memory, allocated %d bytes\n",
 			__FUNCTION__,
-			MALLOCED(osh)));
+			MALLOCED(osh));
 		goto err;
 	}
 	bzero(sdhc, sizeof(bcmsdh_hc_t));
@@ -214,13 +212,13 @@ int bcmsdh_probe(struct device *dev)
 #if defined(BCMLXSDMMC)
 	if (!(sdh = bcmsdh_attach(osh, (void *)0,
 	                          (void **)&regs, irq))) {
-		SDLX_MSG(("%s: bcmsdh_attach failed\n", __FUNCTION__));
+		AP6210_ERR("%s: bcmsdh_attach failed\n", __FUNCTION__);
 		goto err;
 	}
 #else
 	if (!(sdh = bcmsdh_attach(osh, (void *)r->start,
 	                          (void **)&regs, irq))) {
-		SDLX_MSG(("%s: bcmsdh_attach failed\n", __FUNCTION__));
+		AP6210_ERR("%s: bcmsdh_attach failed\n", __FUNCTION__);
 		goto err;
 	}
 #endif 
@@ -243,7 +241,7 @@ int bcmsdh_probe(struct device *dev)
 	if (!(sdhc->ch = drvinfo.attach((vendevid >> 16),
 	                                 (vendevid & 0xFFFF), 0, 0, 0, 0,
 	                                (void *)regs, NULL, sdh))) {
-		SDLX_MSG(("%s: device attach failed\n", __FUNCTION__));
+		AP6210_ERR("%s: device attach failed\n", __FUNCTION__);
 		goto err;
 	}
 
@@ -285,7 +283,7 @@ int bcmsdh_remove(struct device *dev)
 		prev = sdhc;
 	}
 	if (!sdhc) {
-		SDLX_MSG(("%s: failed\n", __FUNCTION__));
+		AP6210_ERR("%s: failed\n", __FUNCTION__);
 		return 0;
 	}
 
@@ -371,30 +369,30 @@ bcmsdh_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (sd_pci_slot != 0xFFFFffff) {
 		if (pdev->bus->number != (sd_pci_slot>>16) ||
 			PCI_SLOT(pdev->devfn) != (sd_pci_slot&0xffff)) {
-			SDLX_MSG(("%s: %s: bus %X, slot %X, vend %X, dev %X\n",
+			AP6210_DEBUG("%s: %s: bus %X, slot %X, vend %X, dev %X\n",
 				__FUNCTION__,
 				bcmsdh_chipmatch(pdev->vendor, pdev->device)
 				?"Found compatible SDIOHC"
 				:"Probing unknown device",
 				pdev->bus->number, PCI_SLOT(pdev->devfn), pdev->vendor,
-				pdev->device));
+				pdev->device);
 			return -ENODEV;
 		}
-		SDLX_MSG(("%s: %s: bus %X, slot %X, vendor %X, device %X (good PCI location)\n",
+		AP6210_DEBUG("%s: %s: bus %X, slot %X, vendor %X, device %X (good PCI location)\n",
 			__FUNCTION__,
 			bcmsdh_chipmatch(pdev->vendor, pdev->device)
 			?"Using compatible SDIOHC"
 			:"WARNING, forced use of unkown device",
-			pdev->bus->number, PCI_SLOT(pdev->devfn), pdev->vendor, pdev->device));
+			pdev->bus->number, PCI_SLOT(pdev->devfn), pdev->vendor, pdev->device);
 	}
 
 	if ((pdev->vendor == VENDOR_TI) && ((pdev->device == PCIXX21_FLASHMEDIA_ID) ||
 	    (pdev->device == PCIXX21_FLASHMEDIA0_ID))) {
 		uint32 config_reg;
 
-		SDLX_MSG(("%s: Disabling TI FlashMedia Controller.\n", __FUNCTION__));
+		AP6210_ERR("%s: Disabling TI FlashMedia Controller.\n", __FUNCTION__);
 		if (!(osh = osl_attach(pdev, PCI_BUS, FALSE))) {
-			SDLX_MSG(("%s: osl_attach failed\n", __FUNCTION__));
+			AP6210_ERR("%s: osl_attach failed\n", __FUNCTION__);
 			goto err;
 		}
 
@@ -417,10 +415,10 @@ bcmsdh_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	}
 
 	/* this is a pci device we might support */
-	SDLX_MSG(("%s: Found possible SDIO Host Controller: bus %d slot %d func %d irq %d\n",
+	AP6210_ERR("%s: Found possible SDIO Host Controller: bus %d slot %d func %d irq %d\n",
 		__FUNCTION__,
 		pdev->bus->number, PCI_SLOT(pdev->devfn),
-		PCI_FUNC(pdev->devfn), pdev->irq));
+		PCI_FUNC(pdev->devfn), pdev->irq);
 
 	/* use bcmsdh_query_device() to get the vendor ID of the target device so
 	 * it will eventually appear in the Broadcom string on the console
@@ -428,13 +426,13 @@ bcmsdh_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	/* allocate SDIO Host Controller state info */
 	if (!(osh = osl_attach(pdev, PCI_BUS, FALSE))) {
-		SDLX_MSG(("%s: osl_attach failed\n", __FUNCTION__));
+		AP6210_ERR("%s: osl_attach failed\n", __FUNCTION__);
 		goto err;
 	}
 	if (!(sdhc = MALLOC(osh, sizeof(bcmsdh_hc_t)))) {
-		SDLX_MSG(("%s: out of memory, allocated %d bytes\n",
+		AP6210_ERR("%s: out of memory, allocated %d bytes\n",
 			__FUNCTION__,
-			MALLOCED(osh)));
+			MALLOCED(osh));
 		goto err;
 	}
 	bzero(sdhc, sizeof(bcmsdh_hc_t));
@@ -446,12 +444,12 @@ bcmsdh_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	pci_set_master(pdev);
 	rc = pci_enable_device(pdev);
 	if (rc) {
-		SDLX_MSG(("%s: Cannot enable PCI device\n", __FUNCTION__));
+		AP6210_ERR("%s: Cannot enable PCI device\n", __FUNCTION__);
 		goto err;
 	}
 	if (!(sdh = bcmsdh_attach(osh, (void *)(uintptr)pci_resource_start(pdev, 0),
 	                          (void **)&regs, pdev->irq))) {
-		SDLX_MSG(("%s: bcmsdh_attach failed\n", __FUNCTION__));
+		AP6210_ERR("%s: bcmsdh_attach failed\n", __FUNCTION__);
 		goto err;
 	}
 
@@ -461,7 +459,7 @@ bcmsdh_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (!(sdhc->ch = drvinfo.attach(VENDOR_BROADCOM, /* pdev->vendor, */
 	                                bcmsdh_query_device(sdh) & 0xFFFF, 0, 0, 0, 0,
 	                                (void *)regs, NULL, sdh))) {
-		SDLX_MSG(("%s: device attach failed\n", __FUNCTION__));
+		AP6210_ERR("%s: device attach failed\n", __FUNCTION__);
 		goto err;
 	}
 
@@ -544,7 +542,7 @@ bcmsdh_register(bcmsdh_driver_t *driver)
 	drvinfo = *driver;
 
 #if defined(BCMPLATFORM_BUS)
-	SDLX_MSG(("Linux Kernel SDIO/MMC Driver\n"));
+	AP6210_ERR("Linux Kernel SDIO/MMC Driver\n");
 	error = sdio_function_init();
 	return error;
 #endif /* defined(BCMPLATFORM_BUS) */
@@ -558,7 +556,7 @@ bcmsdh_register(bcmsdh_driver_t *driver)
 		return 0;
 #endif
 
-	SDLX_MSG(("%s: pci_module_init failed 0x%x\n", __FUNCTION__, error));
+	AP6210_ERR("%s: pci_module_init failed 0x%x\n", __FUNCTION__, error);
 #endif /* BCMPLATFORM_BUS */
 
 	return error;
@@ -584,7 +582,7 @@ bcmsdh_unregister(void)
 
 int bcmsdh_set_drvdata(void * dhdp)
 {
-	SDLX_MSG(("%s Enter \n", __FUNCTION__));
+	AP6210_DEBUG("%s Enter \n", __FUNCTION__);
 
 	dev_set_drvdata(sdhcinfo->dev, dhdp);
 
@@ -622,7 +620,7 @@ static irqreturn_t wlan_oob_irq(int irq, void *dev_id)
 	bcmsdh_oob_intr_set(0);
 
 	if (dhdp == NULL) {
-		SDLX_MSG(("Out of band GPIO interrupt fired way too early\n"));
+		AP6210_ERR("Out of band GPIO interrupt fired way too early\n");
 		return IRQ_HANDLED;
 	}
 
@@ -642,18 +640,18 @@ int bcmsdh_register_oob_intr(void * dhdp)
 {
 	int error = 0;
 	int ret;
-	SDLX_MSG(("%s Enter \n", __FUNCTION__));
+	AP6210_DEBUG("%s Enter \n", __FUNCTION__);
 
 	/* IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE; */
 	dev_set_drvdata(sdhcinfo->dev, dhdp);
 
 	if (!sdhcinfo->oob_irq_registered) {
-		SDLX_MSG(("%s IRQ=%d Type=%X \n", __FUNCTION__,
-			(int)sdhcinfo->oob_irq, (int)sdhcinfo->oob_flags));
+		AP6210_DEBUG("%s IRQ=%d Type=%X \n", __FUNCTION__,
+			(int)sdhcinfo->oob_irq, (int)sdhcinfo->oob_flags);
 
 		ret = request_irq(wl_host_wake_irqno, bcmdhd_gpio_irq_handler, IRQF_DISABLED| IRQF_SHARED| IRQF_TRIGGER_HIGH, "bcmdhd_gpio_irq", (void *)&wl_host_wake_irqno);
 		if (ret) {
-                        pr_err("bcmdhd: request irq%d failed\n", wl_host_wake_irqno);
+                        AP6210_ERR("request irq%d failed\n", wl_host_wake_irqno);
 			return -1;
                 }
 
@@ -665,7 +663,7 @@ int bcmsdh_register_oob_intr(void * dhdp)
 		}
 #endif
 		if (error)
-			SDLX_MSG(("%s enable_irq_wake error=%d \n", __FUNCTION__, error));
+			AP6210_ERR("%s enable_irq_wake error=%d \n", __FUNCTION__, error);
 		sdhcinfo->oob_irq_registered = TRUE;
 		sdhcinfo->oob_irq_enable_flag = TRUE;
 	}
@@ -676,7 +674,7 @@ int bcmsdh_register_oob_intr(void * dhdp)
 void bcmsdh_set_irq(int flag)
 {
 	if (sdhcinfo->oob_irq_registered && sdhcinfo->oob_irq_enable_flag != flag) {
-		SDLX_MSG(("%s Flag = %d\n", __FUNCTION__, flag));
+		AP6210_ERR("%s Flag = %d\n", __FUNCTION__, flag);
 		sdhcinfo->oob_irq_enable_flag = flag;
 		if (flag) {
 			enable_irq(sdhcinfo->oob_irq);
@@ -699,12 +697,12 @@ void bcmsdh_set_irq(int flag)
 
 void bcmsdh_unregister_oob_intr(void)
 {
-	SDLX_MSG(("%s: Enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s: Enter\n", __FUNCTION__);
 
 	if (sdhcinfo->oob_irq_registered == TRUE) {
 
 		if(0 != wl_host_wake_irqno) {
-			pr_info("bcmdhd: free_irq %d\n", wl_host_wake_irqno);
+			AP6210_DEBUG("free_irq %d\n", wl_host_wake_irqno);
 			free_irq(wl_host_wake_irqno, &wl_host_wake_irqno);
 		}
 

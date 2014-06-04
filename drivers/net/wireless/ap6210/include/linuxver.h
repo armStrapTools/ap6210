@@ -521,12 +521,6 @@ typedef struct {
 
 /* requires  tsk_ctl_t tsk  argument, the caller's priv data is passed in owner ptr */
 /* note this macro assumes there may be only one context waiting on thread's completion */
-#ifdef DHD_DEBUG
-#define DBG_THR(x) printk x
-#else
-#define DBG_THR(x)
-#endif
-
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
 #define SMP_RD_BARRIER_DEPENDS(x) smp_read_barrier_depends(x)
 #else
@@ -541,10 +535,8 @@ typedef struct {
 	(tsk_ctl)->parent = owner; \
 	(tsk_ctl)->terminated = FALSE; \
 	(tsk_ctl)->thr_pid = kernel_thread(thread_func, tsk_ctl, flags); \
-	DBG_THR(("%s thr:%lx created\n", __FUNCTION__, (tsk_ctl)->thr_pid)); \
 	if ((tsk_ctl)->thr_pid > 0) \
 		wait_for_completion(&((tsk_ctl)->completed)); \
-	DBG_THR(("%s thr:%lx started\n", __FUNCTION__, (tsk_ctl)->thr_pid)); \
 }
 
 #ifdef USE_KTHREAD_API
@@ -556,7 +548,6 @@ typedef struct {
 	(tsk_ctl)->terminated = FALSE; \
 	(tsk_ctl)->p_task  = kthread_run(thread_func, tsk_ctl, (char*)name); \
 	(tsk_ctl)->thr_pid = (tsk_ctl)->p_task->pid; \
-	DBG_THR(("%s thr:%lx created\n", __FUNCTION__, (tsk_ctl)->thr_pid)); \
 }
 #endif
 
@@ -566,7 +557,6 @@ typedef struct {
 	smp_wmb(); \
 	up(&((tsk_ctl)->sema));	\
 	wait_for_completion(&((tsk_ctl)->completed)); \
-	DBG_THR(("%s thr:%lx terminated OK\n", __FUNCTION__, (tsk_ctl)->thr_pid)); \
 	(tsk_ctl)->thr_pid = -1; \
 }
 

@@ -48,6 +48,8 @@
 #endif
 #endif /* CONFIG_WIFI_CONTROL_FUNC */
 
+#include <ap6210.h>
+
 #ifndef WL_CFG80211
 #define htod32(i) i
 #define htod16(i) i
@@ -56,35 +58,6 @@
 #define htodchanspec(i) i
 #define dtohchanspec(i) i
 #endif
-
-/* message levels */
-#define ANDROID_ERROR_LEVEL	0x0001
-#define ANDROID_TRACE_LEVEL	0x0002
-#define ANDROID_INFO_LEVEL	0x0004
-
-uint android_msg_level = ANDROID_ERROR_LEVEL;
-
-#define ANDROID_ERROR(x) \
-	do { \
-		if (android_msg_level & ANDROID_ERROR_LEVEL) { \
-			printk(KERN_ERR "ANDROID-ERROR) ");	\
-			printk x; \
-		} \
-	} while (0)
-#define ANDROID_TRACE(x) \
-	do { \
-		if (android_msg_level & ANDROID_TRACE_LEVEL) { \
-			printk(KERN_ERR "ANDROID-TRACE) ");	\
-			printk x; \
-		} \
-	} while (0)
-#define ANDROID_INFO(x) \
-	do { \
-		if (android_msg_level & ANDROID_INFO_LEVEL) { \
-			printk(KERN_ERR "ANDROID-INFO) ");	\
-			printk x; \
-		} \
-	} while (0)
 
 /*
  * Android private command strings, PLEASE define new private commands here
@@ -214,7 +187,7 @@ static int wl_android_get_link_speed(struct net_device *net, char *command, int 
 	/* Convert Kbps to Android Mbps */
 	link_speed = link_speed / 1000;
 	bytes_written = snprintf(command, total_len, "LinkSpeed %d", link_speed);
-	ANDROID_INFO(("%s: command result is %s\n", __FUNCTION__, command));
+	AP6210_DEBUG("%s: command result is %s\n", __FUNCTION__, command);
 	return bytes_written;
 }
 
@@ -236,13 +209,13 @@ static int wl_android_get_rssi(struct net_device *net, char *command, int total_
 	if (error)
 		return -1;
 	if ((ssid.SSID_len == 0) || (ssid.SSID_len > DOT11_MAX_SSID_LEN)) {
-		ANDROID_ERROR(("%s: wldev_get_ssid failed\n", __FUNCTION__));
+		AP6210_ERR("%s: wldev_get_ssid failed\n", __FUNCTION__);
 	} else {
 		memcpy(command, ssid.SSID, ssid.SSID_len);
 		bytes_written = ssid.SSID_len;
 	}
 	bytes_written += snprintf(&command[bytes_written], total_len, " rssi %d", rssi);
-	ANDROID_INFO(("%s: command result is %s (%d)\n", __FUNCTION__, command, bytes_written));
+	AP6210_DEBUG("%s: command result is %s (%d)\n", __FUNCTION__, command, bytes_written);
 	return bytes_written;
 }
 
@@ -260,10 +233,10 @@ static int wl_android_set_suspendopt(struct net_device *dev, char *command, int 
 
 	if (ret_now != suspend_flag) {
 		if (!(ret = net_os_set_suspend(dev, ret_now, 1)))
-			ANDROID_INFO(("%s: Suspend Flag %d -> %d\n",
-				__FUNCTION__, ret_now, suspend_flag));
+			AP6210_DEBUG("%s: Suspend Flag %d -> %d\n",
+				__FUNCTION__, ret_now, suspend_flag);
 		else
-			ANDROID_ERROR(("%s: failed %d\n", __FUNCTION__, ret));
+			AP6210_ERR("%s: failed %d\n", __FUNCTION__, ret);
 	}
 	return ret;
 }
@@ -281,9 +254,9 @@ static int wl_android_set_suspendmode(struct net_device *dev, char *command, int
 		suspend_flag = 1;
 
 	if (!(ret = net_os_set_suspend(dev, suspend_flag, 0)))
-		ANDROID_INFO(("%s: Suspend Mode %d\n",__FUNCTION__,suspend_flag));
+		AP6210_DEBUG("%s: Suspend Mode %d\n",__FUNCTION__,suspend_flag);
 	else
-		ANDROID_ERROR(("%s: failed %d\n",__FUNCTION__,ret));
+		AP6210_ERR("%s: failed %d\n",__FUNCTION__,ret);
 #endif
 	return ret;
 }
@@ -335,10 +308,10 @@ static int wl_android_set_pno_setup(struct net_device *dev, char *command, int t
 		};
 #endif /* PNO_SET_DEBUG */
 
-	ANDROID_INFO(("%s: command=%s, len=%d\n", __FUNCTION__, command, total_len));
+	AP6210_DEBUG("%s: command=%s, len=%d\n", __FUNCTION__, command, total_len);
 
 	if (total_len < (strlen(CMD_PNOSETUP_SET) + sizeof(cmd_tlv_t))) {
-		ANDROID_ERROR(("%s argument=%d less min size\n", __FUNCTION__, total_len));
+		AP6210_ERR("%s argument=%d less min size\n", __FUNCTION__, total_len);
 		goto exit_proc;
 	}
 
@@ -346,8 +319,8 @@ static int wl_android_set_pno_setup(struct net_device *dev, char *command, int t
 #ifdef PNO_SET_DEBUG
 	memcpy(command, pno_in_example, sizeof(pno_in_example));
 	for (i = 0; i < sizeof(pno_in_example); i++)
-		printf("%02X ", command[i]);
-	printf("\n");
+		AP6210_DUMP("%02X ", command[i]);
+	AP6210_DUMP("\n");
 	total_len = sizeof(pno_in_example);
 #endif
 
@@ -366,40 +339,40 @@ static int wl_android_set_pno_setup(struct net_device *dev, char *command, int t
 
 		if ((nssid = wl_iw_parse_ssid_list_tlv(&str_ptr, ssids_local,
 			MAX_PFN_LIST_COUNT, &tlv_size_left)) <= 0) {
-			ANDROID_ERROR(("SSID is not presented or corrupted ret=%d\n", nssid));
+			AP6210_ERR("SSID is not presented or corrupted ret=%d\n", nssid);
 			goto exit_proc;
 		} else {
 			if ((str_ptr[0] != PNO_TLV_TYPE_TIME) || (tlv_size_left <= 1)) {
-				ANDROID_ERROR(("%s scan duration corrupted field size %d\n",
-					__FUNCTION__, tlv_size_left));
+				AP6210_ERR("%s scan duration corrupted field size %d\n",
+					__FUNCTION__, tlv_size_left);
 				goto exit_proc;
 			}
 			str_ptr++;
 			pno_time = simple_strtoul(str_ptr, &str_ptr, 16);
-			ANDROID_INFO(("%s: pno_time=%d\n", __FUNCTION__, pno_time));
+			AP6210_DEBUG("%s: pno_time=%d\n", __FUNCTION__, pno_time);
 
 			if (str_ptr[0] != 0) {
 				if ((str_ptr[0] != PNO_TLV_FREQ_REPEAT)) {
-					ANDROID_ERROR(("%s pno repeat : corrupted field\n",
-						__FUNCTION__));
+					AP6210_ERR("%s pno repeat : corrupted field\n",
+						__FUNCTION__);
 					goto exit_proc;
 				}
 				str_ptr++;
 				pno_repeat = simple_strtoul(str_ptr, &str_ptr, 16);
-				ANDROID_INFO(("%s :got pno_repeat=%d\n", __FUNCTION__, pno_repeat));
+				AP6210_DEBUG("%s :got pno_repeat=%d\n", __FUNCTION__, pno_repeat);
 				if (str_ptr[0] != PNO_TLV_FREQ_EXPO_MAX) {
-					ANDROID_ERROR(("%s FREQ_EXPO_MAX corrupted field size\n",
-						__FUNCTION__));
+					AP6210_ERR("%s FREQ_EXPO_MAX corrupted field size\n",
+						__FUNCTION__);
 					goto exit_proc;
 				}
 				str_ptr++;
 				pno_freq_expo_max = simple_strtoul(str_ptr, &str_ptr, 16);
-				ANDROID_INFO(("%s: pno_freq_expo_max=%d\n",
-					__FUNCTION__, pno_freq_expo_max));
+				AP6210_DEBUG("%s: pno_freq_expo_max=%d\n",
+					__FUNCTION__, pno_freq_expo_max);
 			}
 		}
 	} else {
-		ANDROID_ERROR(("%s get wrong TLV command\n", __FUNCTION__));
+		AP6210_ERR("%s get wrong TLV command\n", __FUNCTION__);
 		goto exit_proc;
 	}
 
@@ -431,9 +404,9 @@ int wl_android_wifi_on(struct net_device *dev)
 	int ret = 0;
 	int retry = POWERUP_MAX_RETRY;
 
-	printk("%s in\n", __FUNCTION__);
+	AP6210_DEBUG("%s in\n", __FUNCTION__);
 	if (!dev) {
-		ANDROID_ERROR(("%s: dev is null\n", __FUNCTION__));
+		AP6210_ERR("%s: dev is null\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
@@ -444,12 +417,12 @@ int wl_android_wifi_on(struct net_device *dev)
 			ret = sdioh_start(NULL, 0);
 			if (ret == 0)
 				break;
-			ANDROID_ERROR(("\nfailed to power up wifi chip, retry again (%d left) **\n\n",
-				retry+1));
+			AP6210_ERR("failed to power up wifi chip, retry again (%d left) **\n\n",
+				retry+1);
 			dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
 		} while (retry-- >= 0);
 		if (ret != 0) {
-			ANDROID_ERROR(("\nfailed to power up wifi chip, max retry reached **\n\n"));
+			AP6210_ERR("failed to power up wifi chip, max retry reached **\n\n");
 			goto exit;
 		}
 		ret = dhd_dev_reset(dev, FALSE);
@@ -470,14 +443,14 @@ int wl_android_wifi_on(struct net_device *dev)
 
 exit:
 	dhd_net_if_unlock(dev);
-	printk("%s: Success\n", __FUNCTION__);
+	AP6210_DEBUG("%s: Success\n", __FUNCTION__);
 	return ret;
 err:
 	dhd_dev_reset(dev, TRUE);
 	sdioh_stop(NULL);
 	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
 	dhd_net_if_unlock(dev);
-	printk("%s: Failed\n", __FUNCTION__);
+	AP6210_DEBUG("%s: Failed\n", __FUNCTION__);
 
 	return ret;
 }
@@ -486,9 +459,9 @@ int wl_android_wifi_off(struct net_device *dev)
 {
 	int ret = 0;
 
-	printk("%s in\n", __FUNCTION__);
+	AP6210_DEBUG("%s in\n", __FUNCTION__);
 	if (!dev) {
-		ANDROID_TRACE(("%s: dev is null\n", __FUNCTION__));
+		AP6210_DEBUG("%s: dev is null\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
@@ -514,10 +487,10 @@ static int wl_android_set_fwpath(struct net_device *net, char *command, int tota
 	bcm_strncpy_s(fw_path, sizeof(fw_path),
 		command + strlen(CMD_SETFWPATH) + 1, MOD_PARAM_PATHLEN - 1);
 	if (strstr(fw_path, "apsta") != NULL) {
-		ANDROID_INFO(("GOT APSTA FIRMWARE\n"));
+		AP6210_DEBUG("GOT APSTA FIRMWARE\n");
 		ap_fw_loaded = TRUE;
 	} else {
-		ANDROID_INFO(("GOT STA FIRMWARE\n"));
+		AP6210_DEBUG("GOT STA FIRMWARE\n");
 		ap_fw_loaded = FALSE;
 	}
 	return 0;
@@ -537,14 +510,14 @@ wl_android_set_pmk(struct net_device *dev, char *command, int total_len)
 	memcpy((char *)pmk, command + strlen("SET_PMK "), 32);
 	error = wldev_iovar_setbuf(dev, "okc_info_pmk", pmk, 32, smbuf, sizeof(smbuf), NULL);
 	if (error) {
-		ANDROID_ERROR(("Failed to set PMK for OKC, error = %d\n", error));
+		AP6210_ERR("Failed to set PMK for OKC, error = %d\n", error);
 	}
 #ifdef OKC_DEBUG
-	ANDROID_ERROR(("PMK is "));
+	AP6210_ERR("PMK is ");
 	for (i = 0; i < 32; i++)
-		ANDROID_ERROR(("%02X ", pmk[i]));
+		AP6210_ERR("%02X ", pmk[i]);
 
-	ANDROID_ERROR(("\n"));
+	AP6210_ERR("\n");
 #endif
 	return error;
 }
@@ -558,8 +531,8 @@ wl_android_okc_enable(struct net_device *dev, char *command, int total_len)
 	okc_enable = command[strlen(CMD_OKC_ENABLE) + 1] - '0';
 	error = wldev_iovar_setint(dev, "okc_enable", okc_enable);
 	if (error) {
-		ANDROID_ERROR(("Failed to %s OKC, error = %d\n",
-			okc_enable ? "enable" : "disable", error));
+		AP6210_ERR("Failed to %s OKC, error = %d\n",
+			okc_enable ? "enable" : "disable", error);
 	}
 
 	return error;
@@ -571,19 +544,19 @@ int wl_android_set_roam_mode(struct net_device *dev, char *command, int total_le
 	int mode = 0;
 
 	if (sscanf(command, "%*s %d", &mode) != 1) {
-		ANDROID_ERROR(("%s: Failed to get Parameter\n", __FUNCTION__));
+		AP6210_ERR("%s: Failed to get Parameter\n", __FUNCTION__);
 		return -1;
 	}
 
 	error = wldev_iovar_setint(dev, "roam_off", mode);
 	if (error) {
-		ANDROID_ERROR(("%s: Failed to set roaming Mode %d, error = %d\n",
-		__FUNCTION__, mode, error));
+		AP6210_ERR("%s: Failed to set roaming Mode %d, error = %d\n",
+		__FUNCTION__, mode, error);
 		return -1;
 	}
 	else
-		ANDROID_ERROR(("%s: succeeded to set roaming Mode %d, error = %d\n",
-		__FUNCTION__, mode, error));
+		AP6210_ERR("%s: succeeded to set roaming Mode %d, error = %d\n",
+		__FUNCTION__, mode, error);
 	return 0;
 }
 
@@ -607,13 +580,13 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	}
 	if (priv_cmd.total_len > PRIVATE_COMMAND_MAX_LEN)
 	{
-		ANDROID_ERROR(("%s: too long priavte command\n", __FUNCTION__));
+		AP6210_ERR("%s: too long priavte command\n", __FUNCTION__);
 		ret = -EINVAL;
 	}
 	command = kmalloc(priv_cmd.total_len, GFP_KERNEL);
 	if (!command)
 	{
-		ANDROID_ERROR(("%s: failed to allocate memory\n", __FUNCTION__));
+		AP6210_ERR("%s: failed to allocate memory\n", __FUNCTION__);
 		ret = -ENOMEM;
 		goto exit;
 	}
@@ -622,10 +595,10 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		goto exit;
 	}
 
-	ANDROID_INFO(("%s: Android private cmd \"%s\" on %s\n", __FUNCTION__, command, ifr->ifr_name));
+	AP6210_DEBUG("%s: Android private cmd \"%s\" on %s\n", __FUNCTION__, command, ifr->ifr_name);
 
 	if (strnicmp(command, CMD_START, strlen(CMD_START)) == 0) {
-		ANDROID_INFO(("%s, Received regular START command\n", __FUNCTION__));
+		AP6210_DEBUG("%s, Received regular START command\n", __FUNCTION__);
 		bytes_written = wl_android_wifi_on(net);
 	}
 	else if (strnicmp(command, CMD_SETFWPATH, strlen(CMD_SETFWPATH)) == 0) {
@@ -633,8 +606,8 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	}
 
 	if (!g_wifi_on) {
-		ANDROID_ERROR(("%s: Ignore private cmd \"%s\" - iface %s is down\n",
-			__FUNCTION__, command, ifr->ifr_name));
+		AP6210_ERR("%s: Ignore private cmd \"%s\" - iface %s is down\n",
+			__FUNCTION__, command, ifr->ifr_name);
 		ret = 0;
 		goto exit;
 	}
@@ -764,7 +737,7 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	else if (strnicmp(command, CMD_SETROAMMODE, strlen(CMD_SETROAMMODE)) == 0)
 		bytes_written = wl_android_set_roam_mode(net, command, priv_cmd.total_len);
 	else {
-		ANDROID_ERROR(("Unknown PRIVATE command %s - ignored\n", command));
+		AP6210_ERR("Unknown PRIVATE command %s - ignored\n", command);
 		snprintf(command, 3, "OK");
 		bytes_written = strlen("OK");
 	}
@@ -773,14 +746,14 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		if ((bytes_written == 0) && (priv_cmd.total_len > 0))
 			command[0] = '\0';
 		if (bytes_written >= priv_cmd.total_len) {
-			ANDROID_ERROR(("%s: bytes_written = %d\n", __FUNCTION__, bytes_written));
+			AP6210_ERR("%s: bytes_written = %d\n", __FUNCTION__, bytes_written);
 			bytes_written = priv_cmd.total_len;
 		} else {
 			bytes_written++;
 		}
 		priv_cmd.used_len = bytes_written;
 		if (copy_to_user(priv_cmd.buf, command, bytes_written)) {
-			ANDROID_ERROR(("%s: failed to copy data to user buffer\n", __FUNCTION__));
+			AP6210_ERR("%s: failed to copy data to user buffer\n", __FUNCTION__);
 			ret = -EFAULT;
 		}
 	}
@@ -839,8 +812,8 @@ wl_free_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl)
 	node = *rssi_head;
 
 	for (;node;) {
-		ANDROID_INFO(("%s: Free %d with BSSID %pM\n",
-			__FUNCTION__, i, &node->BSSID));
+		AP6210_DEBUG("%s: Free %d with BSSID %pM\n",
+			__FUNCTION__, i, &node->BSSID);
 		cur = node;
 		node = cur->next;
 		kfree(cur);
@@ -873,8 +846,8 @@ wl_delete_dirty_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl)
 				tmp = 0;
 				prev->next = node->next;
 			}
-			ANDROID_INFO(("%s: Del %d with BSSID %pM\n",
-				__FUNCTION__, i, &node->BSSID));
+			AP6210_DEBUG("%s: Del %d with BSSID %pM\n",
+				__FUNCTION__, i, &node->BSSID);
 			kfree(node);
 			if (tmp == 1) {
 				node = *rssi_head;
@@ -924,8 +897,8 @@ wl_update_connected_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl, struct net
 	node = *rssi_head;
 	for (;node;) {
 		if (!memcmp(&node->BSSID, &bssid, ETHER_ADDR_LEN)) {
-			ANDROID_INFO(("%s: Update %d with BSSID %pM, RSSI=%d\n",
-				__FUNCTION__, k, &bssid, rssi));
+			AP6210_DEBUG("%s: Update %d with BSSID %pM, RSSI=%d\n",
+				__FUNCTION__, k, &bssid, rssi);
 			for(j=0; j<RSSIAVG_LEN-1; j++)
 				node->RSSI[j] = node->RSSI[j+1];
 			node->RSSI[j] = rssi;
@@ -958,8 +931,8 @@ wl_update_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl, wl_scan_results_t *s
 		bi = bi ? (wl_bss_info_t *)((uintptr)bi + dtoh32(bi->length)) : ss_list->bss_info;
 		for (;node;) {
 			if (!memcmp(&node->BSSID, &bi->BSSID, ETHER_ADDR_LEN)) {
-				ANDROID_INFO(("%s: Update %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
-					__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID));
+				AP6210_DEBUG("%s: Update %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
+					__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID);
 				for(j=0; j<RSSIAVG_LEN-1; j++)
 					node->RSSI[j] = node->RSSI[j+1];
 				node->RSSI[j] = dtoh16(bi->RSSI);
@@ -976,12 +949,12 @@ wl_update_rssi_cache(wl_rssi_cache_ctrl_t *rssi_cache_ctrl, wl_scan_results_t *s
 
 		leaf = kmalloc(sizeof(wl_rssi_cache_t), GFP_KERNEL);
 		if (!leaf) {
-			ANDROID_ERROR(("%s: Memory alloc failure %d\n",
-				__FUNCTION__, sizeof(wl_rssi_cache_t)));
+			AP6210_ERR("%s: Memory alloc failure %d\n",
+				__FUNCTION__, sizeof(wl_rssi_cache_t));
 			return;
 		}
-		ANDROID_INFO(("%s: Add %d with cached BSSID %pM, RSSI=%d, SSID \"%s\" in the leaf\n",
-				__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID));
+		AP6210_DEBUG("%s: Add %d with cached BSSID %pM, RSSI=%d, SSID \"%s\" in the leaf\n",
+				__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID);
 
 		leaf->next = NULL;
 		leaf->dirty = 0;
@@ -1020,8 +993,8 @@ wl_get_avg_rssi(wl_rssi_cache_ctrl_t *rssi_cache_ctrl, void *addr)
 	if (rssi >= -2)
 		rssi = -2;
 	if (rssi == -200) {
-		ANDROID_ERROR(("%s: BSSID %pM does not in RSSI cache\n",
-		__FUNCTION__, addr));
+		AP6210_ERR("%s: BSSID %pM does not in RSSI cache\n",
+		__FUNCTION__, addr);
 	}
 	return (int16)rssi;
 }
@@ -1062,14 +1035,14 @@ wl_free_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl)
 	wl_bss_cache_t *node, *cur, **bss_head;
 	int i=0;
 
-	ANDROID_TRACE(("%s called\n", __FUNCTION__));
+	AP6210_DEBUG("%s called\n", __FUNCTION__);
 
 	bss_head = &bss_cache_ctrl->m_cache_head;
 	node = *bss_head;
 
 	for (;node;) {
-		ANDROID_TRACE(("%s: Free %d with BSSID %pM\n",
-			__FUNCTION__, i, &node->results.bss_info->BSSID));
+		AP6210_DEBUG("%s: Free %d with BSSID %pM\n",
+			__FUNCTION__, i, &node->results.bss_info->BSSID);
 		cur = node;
 		node = cur->next;
 		kfree(cur);
@@ -1097,9 +1070,9 @@ wl_delete_dirty_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl)
 				tmp = 0;
 				prev->next = node->next;
 			}
-			ANDROID_TRACE(("%s: Del %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
+			AP6210_DEBUG("%s: Del %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
 				__FUNCTION__, i, &node->results.bss_info->BSSID,
-				dtoh16(node->results.bss_info->RSSI), node->results.bss_info->SSID));
+				dtoh16(node->results.bss_info->RSSI), node->results.bss_info->SSID);
 			kfree(node);
 			if (tmp == 1) {
 				node = *bss_head;
@@ -1151,8 +1124,8 @@ wl_update_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl, wl_scan_results_t *ss_l
  				tmp = node;
 				leaf = kmalloc(dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN, GFP_KERNEL);
 				if (!leaf) {
-					ANDROID_ERROR(("%s: Memory alloc failure %d and keep old BSS info\n",
-						__FUNCTION__, dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN));
+					AP6210_ERR("%s: Memory alloc failure %d and keep old BSS info\n",
+						__FUNCTION__, dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN);
 					break;
 				}
 
@@ -1161,8 +1134,8 @@ wl_update_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl, wl_scan_results_t *ss_l
 				leaf->dirty = 0;
 				leaf->results.count = 1;
 				leaf->results.version = ss_list->version;
-				ANDROID_TRACE(("%s: Update %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
-					__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID));
+				AP6210_DEBUG("%s: Update %d with BSSID %pM, RSSI=%d, SSID \"%s\"\n",
+					__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID);
 				if (!prev)
 					*bss_head = leaf;
 				else
@@ -1183,12 +1156,12 @@ wl_update_bss_cache(wl_bss_cache_ctrl_t *bss_cache_ctrl, wl_scan_results_t *ss_l
 
 		leaf = kmalloc(dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN, GFP_KERNEL);
 		if (!leaf) {
-			ANDROID_ERROR(("%s: Memory alloc failure %d\n", __FUNCTION__,
-				dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN));
+			AP6210_ERR("%s: Memory alloc failure %d\n", __FUNCTION__,
+				dtoh32(bi->length) + WLC_IW_SS_CACHE_CTRL_FIELD_MAXLEN);
 			return;
 		}
-		ANDROID_TRACE(("%s: Add %d with cached BSSID %pM, RSSI=%d, SSID \"%s\" in the leaf\n",
-				__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID));
+		AP6210_DEBUG("%s: Add %d with cached BSSID %pM, RSSI=%d, SSID \"%s\" in the leaf\n",
+				__FUNCTION__, k, &bi->BSSID, dtoh16(bi->RSSI), bi->SSID);
 
 		memcpy(leaf->results.bss_info, bi, dtoh32(bi->length));
 		leaf->next = NULL;
@@ -1215,10 +1188,10 @@ wl_run_bss_cache_timer(wl_bss_cache_ctrl_t *bss_cache_ctrl, int kick_off)
 		if (kick_off) {
 			(*timer)->expires = jiffies + BSSCACHE_TIME * HZ / 1000;
 			add_timer(*timer);
-			ANDROID_TRACE(("%s: timer starts\n", __FUNCTION__));
+			AP6210_DEBUG("%s: timer starts\n", __FUNCTION__);
 		} else {
 			del_timer_sync(*timer);
-			ANDROID_TRACE(("%s: timer stops\n", __FUNCTION__));
+			AP6210_DEBUG("%s: timer stops\n", __FUNCTION__);
 		}
 	}
 }
@@ -1229,13 +1202,13 @@ wl_set_bss_cache_timer_flag(ulong data)
 	wl_bss_cache_ctrl_t *bss_cache_ctrl = (wl_bss_cache_ctrl_t *)data;
 
 	bss_cache_ctrl->m_timer_expired = 1;
-	ANDROID_TRACE(("%s called\n", __FUNCTION__));
+	AP6210_DEBUG("%s called\n", __FUNCTION__);
 }
 
 void
 wl_release_bss_cache_ctrl(wl_bss_cache_ctrl_t *bss_cache_ctrl)
 {
-	ANDROID_TRACE(("%s:\n", __FUNCTION__));
+	AP6210_DEBUG("%s:\n", __FUNCTION__);
 	wl_free_bss_cache(bss_cache_ctrl);
 	wl_run_bss_cache_timer(bss_cache_ctrl, 0);
 	if (bss_cache_ctrl->m_timer) {
@@ -1246,12 +1219,12 @@ wl_release_bss_cache_ctrl(wl_bss_cache_ctrl_t *bss_cache_ctrl)
 void
 wl_init_bss_cache_ctrl(wl_bss_cache_ctrl_t *bss_cache_ctrl)
 {
-	ANDROID_TRACE(("%s:\n", __FUNCTION__));
+	AP6210_DEBUG("%s:\n", __FUNCTION__);
 	bss_cache_ctrl->m_timer_expired = 0;
 
 	bss_cache_ctrl->m_timer = kmalloc(sizeof(struct timer_list), GFP_KERNEL);
 	if (!bss_cache_ctrl->m_timer) {
-		ANDROID_ERROR(("%s: Memory alloc failure\n", __FUNCTION__ ));
+		AP6210_ERR("%s: Memory alloc failure\n", __FUNCTION__ );
 		return;
 	}
 	init_timer(bss_cache_ctrl->m_timer);
@@ -1280,7 +1253,7 @@ int wl_android_wifictrl_func_add(void)
 
 	ret = wifi_add_dev();
 	if (ret) {
-		ANDROID_ERROR(("%s: platform_driver_register failed\n", __FUNCTION__));
+		AP6210_ERR("%s: platform_driver_register failed\n", __FUNCTION__);
 		return ret;
 	}
 	g_wifidev_registered = 1;
@@ -1288,7 +1261,7 @@ int wl_android_wifictrl_func_add(void)
 	/* Waiting callback after platform_driver_register is done or exit with error */
 	if (down_timeout(&wifi_control_sem,  msecs_to_jiffies(1000)) != 0) {
 		ret = -EINVAL;
-		ANDROID_ERROR(("%s: platform_driver_register timeout\n", __FUNCTION__));
+		AP6210_ERR("%s: platform_driver_register timeout\n", __FUNCTION__);
 	}
 
 	return ret;
@@ -1309,14 +1282,14 @@ void* wl_android_prealloc(int section, unsigned long size)
 	if (wifi_control_data && wifi_control_data->mem_prealloc) {
 		alloc_ptr = wifi_control_data->mem_prealloc(section, size);
 		if (alloc_ptr) {
-			ANDROID_INFO(("success alloc section %d\n", section));
+			AP6210_DEBUG("success alloc section %d\n", section);
 			if (size != 0L)
 				bzero(alloc_ptr, size);
 			return alloc_ptr;
 		}
 	}
 
-	ANDROID_ERROR(("can't alloc section %d\n", section));
+	AP6210_ERR("can't alloc section %d\n", section);
 	return NULL;
 }
 
@@ -1335,7 +1308,7 @@ int wifi_get_irq_number(unsigned long *irq_flags_ptr)
 
 int wifi_set_power(int on, unsigned long msec)
 {
-	ANDROID_ERROR(("%s = %d\n", __FUNCTION__, on));
+	AP6210_ERR("%s = %d\n", __FUNCTION__, on);
 	if (wifi_control_data && wifi_control_data->set_power) {
 		wifi_control_data->set_power(on);
 	}
@@ -1347,7 +1320,7 @@ int wifi_set_power(int on, unsigned long msec)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
 int wifi_get_mac_addr(unsigned char *buf)
 {
-	ANDROID_ERROR(("%s\n", __FUNCTION__));
+	AP6210_ERR("%s\n", __FUNCTION__);
 	if (!buf)
 		return -EINVAL;
 	if (wifi_control_data && wifi_control_data->get_mac_addr) {
@@ -1360,7 +1333,7 @@ int wifi_get_mac_addr(unsigned char *buf)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39))
 void *wifi_get_country_code(char *ccode)
 {
-	ANDROID_TRACE(("%s\n", __FUNCTION__));
+	AP6210_DEBUG("%s\n", __FUNCTION__);
 	if (!ccode)
 		return NULL;
 	if (wifi_control_data && wifi_control_data->get_country_code) {
@@ -1372,7 +1345,7 @@ void *wifi_get_country_code(char *ccode)
 
 static int wifi_set_carddetect(int on)
 {
-	ANDROID_ERROR(("%s = %d\n", __FUNCTION__, on));
+	AP6210_ERR("%s = %d\n", __FUNCTION__, on);
 	if (wifi_control_data && wifi_control_data->set_carddetect) {
 		wifi_control_data->set_carddetect(on);
 	}
@@ -1401,7 +1374,7 @@ static int wifi_remove(struct platform_device *pdev)
 	struct wifi_platform_data *wifi_ctrl =
 		(struct wifi_platform_data *)(pdev->dev.platform_data);
 
-	ANDROID_ERROR(("## %s\n", __FUNCTION__));
+	AP6210_ERR("## %s\n", __FUNCTION__);
 	wifi_control_data = wifi_ctrl;
 
 	wifi_set_power(0, WIFI_TURNOFF_DELAY);	/* Power Off */
@@ -1413,7 +1386,7 @@ static int wifi_remove(struct platform_device *pdev)
 
 static int wifi_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	ANDROID_TRACE(("##> %s\n", __FUNCTION__));
+	AP6210_DEBUG("##> %s\n", __FUNCTION__);
 #if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_CAPRI)
 	if (dhd_os_check_wakelock(bcmsdh_get_drvdata()))
 		return -EBUSY;
@@ -1426,7 +1399,7 @@ static int wifi_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int wifi_resume(struct platform_device *pdev)
 {
-	ANDROID_TRACE(("##> %s\n", __FUNCTION__));
+	AP6210_DEBUG("##> %s\n", __FUNCTION__);
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39)) && defined(OOB_INTR_ONLY) && 1
 	if (dhd_os_check_if_up(bcmsdh_get_drvdata()))
 		bcmsdh_oob_intr_set(1);
@@ -1457,7 +1430,7 @@ static struct platform_driver wifi_device_legacy = {
 static int wifi_add_dev(void)
 {
 	int ret = 0;
-	ANDROID_TRACE(("## Calling platform_driver_register\n"));
+	AP6210_DEBUG("## Calling platform_driver_register\n");
 	ret = platform_driver_register(&wifi_device);
 	if (ret)
 		return ret;
@@ -1468,7 +1441,7 @@ static int wifi_add_dev(void)
 
 static void wifi_del_dev(void)
 {
-	ANDROID_TRACE(("## Unregister platform_driver_register\n"));
+	AP6210_DEBUG("## Unregister platform_driver_register\n");
 	platform_driver_unregister(&wifi_device);
 	platform_driver_unregister(&wifi_device_legacy);
 }

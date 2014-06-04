@@ -11,6 +11,7 @@
 #include <linux/proc_fs.h>
 #include <linux/regulator/consumer.h>
 #include <linux/gpio.h>
+#include <ap6210.h>
 
 static char* wifi_para = "wifi_para";
 
@@ -29,10 +30,6 @@ struct ap6210_gpio_wifi_ops {
 	struct proc_dir_entry *proc_power;
 #endif	/* CONFIG_PROC_FS */
 };
-
-#define WIFI_ERR(...)	pr_err("[ap6210_gpio_wifi] "__VA_ARGS__)
-#define WIFI_INF(...)	pr_info("[ap6210_gpio_wifi] "__VA_ARGS__)
-#define WIFI_WRN(...)	pr_warning("[ap6210_gpio_wifi] "__VA_ARGS__)
 
 static int ap6210_wl_regon = 0;
 static int ap6210_bt_regon = 0;
@@ -76,7 +73,7 @@ static int ap6210_gpio_ctrl(char* name, int level)
 				gpio = ap6210_bt_regon;
 				break;
 			default:
-				WIFI_WRN("no matched gpio.\n" );
+				AP6210_ERR("no matched gpio.\n" );
 			}
 			break;
 		}
@@ -105,7 +102,7 @@ static int ap6210_gpio_read(char* name)
 				gpio = ap6210_bt_regon;
 				break;
 			default:
-				WIFI_WRN("no matched gpio.\n" );
+				AP6210_ERR("no matched gpio.\n" );
 			}
 			break;
 		}
@@ -127,7 +124,7 @@ void ap6210_power(int mode, int *updown)
 			ap6210_gpio_ctrl("ap6210_wl_regon", 0);
 			mdelay(100);
 		}
-		WIFI_INF("sdio wifi power state: %s\n", *updown ? "on" : "off");
+		AP6210_DEBUG("sdio wifi power state: %s\n", *updown ? "on" : "off");
 	} else {
 		*updown = ap6210_gpio_read("ap6210_wl_regon");
 	}
@@ -145,13 +142,13 @@ static void ap6210_cfg_gpio_32k_clkout(int gpio_index)
 	ret = clk_set_parent(clk_32k, parent);
 
 	if(ret){
-		WIFI_ERR("32k clk_set_parent fail.\n" );
+		AP6210_ERR("32k clk_set_parent fail.\n" );
 		return;
 	}
 
 	ret = clk_set_rate(clk_32k, 32768);
 	if(ret){
-		WIFI_ERR("32k clk_set_rate fail.\n" );
+		AP6210_ERR("32k clk_set_rate fail.\n" );
 		return;
 	}
 
@@ -165,24 +162,24 @@ void ap6210_gpio_init(void)
 /* CT expected ap6210_lpo as a GPIO */
 	ap6210_lpo = gpio_request_ex(wifi_para, "ap6xxx_lpo");
 	if (!ap6210_lpo) {
-		WIFI_ERR("request lpo gpio failed.\n" );
+		AP6210_ERR("request lpo gpio failed.\n" );
 		return;
 	}
 
 	if(ap6210_lpo) {
-		WIFI_INF("config 32k clock.\n" );
+		AP6210_DEBUG("config 32k clock.\n" );
 		ap6210_cfg_gpio_32k_clkout(ap6210_lpo);
 	}
 
 	ap6210_wl_regon = gpio_request_ex(wifi_para, "ap6xxx_wl_regon");
 	if (!ap6210_wl_regon) {
-		WIFI_ERR("request wl_regon gpio failed.\n" );
+		AP6210_ERR("request wl_regon gpio failed.\n" );
 		return;
 	}
 
 	ap6210_bt_regon = gpio_request_ex(wifi_para, "ap6xxx_bt_regon");
 	if (!ap6210_bt_regon) {
-		WIFI_ERR("request ap6210_bt_regon gpio failed.\n" );
+		AP6210_ERR("request ap6210_bt_regon gpio failed.\n" );
 		return;
 	}
 
@@ -196,7 +193,7 @@ int ap6210_gpio_wifi_get_mod_type(void)
 	if (ops->wifi_used)
 		return ops->module_sel;
 	else {
-		WIFI_WRN("No wifi type selected, please check your config.\n" );
+		AP6210_ERR("No wifi type selected, please check your config.\n" );
 		return 0;
 	}
 }
@@ -208,7 +205,7 @@ int ap6210_gpio_wifi_gpio_ctrl(char* name, int level)
 	if (ops->wifi_used && ops->gpio_ctrl)		
 		return ops->gpio_ctrl(name, level);	
 	else {		
-		WIFI_WRN("No wifi type selected, please check your config.\n" );		
+		AP6210_ERR("No wifi type selected, please check your config.\n" );		
 		return -1;	
 	}
 }
@@ -222,7 +219,7 @@ void ap6210_gpio_wifi_power(int on)
 	if (ops->wifi_used && ops->power)
 		return ops->power(1, &power);
 	else {
-		WIFI_WRN("No wifi type selected, please check your config.\n" );
+		AP6210_ERR("No wifi type selected, please check your config.\n" );
 		return;
 	}
 }
@@ -251,7 +248,7 @@ static int ap6210_gpio_wifi_power_ctrl(struct file *file, const char __user *buf
 	if (ops->power)
 		ops->power(1, &power);
 	else
-		WIFI_WRN("No power control for %s\n", ops->mod_name);
+		AP6210_ERR("No power control for %s\n", ops->mod_name);
 	return sizeof(power);	
 }
 
@@ -265,13 +262,13 @@ static inline void awwifi_procfs_attach(void)
 	ops->proc_root = proc_mkdir(proc_rootname, NULL);
 	if (IS_ERR(ops->proc_root))
 	{
-		WIFI_WRN("failed to create procfs \"%s\".\n", proc_rootname );
+		AP6210_ERR("failed to create procfs \"%s\".\n", proc_rootname );
 	}
 
 	ops->proc_power = create_proc_entry(proc_powername, 0644, ops->proc_root);
 	if (IS_ERR(ops->proc_power))
 	{
-		WIFI_WRN("failed to create procfs \"%s\".\n", proc_powername);
+		AP6210_ERR("failed to create procfs \"%s\".\n", proc_powername);
 	}
 	ops->proc_power->data = ops;
 	ops->proc_power->read_proc = ap6210_gpio_wifi_power_stat;
@@ -298,32 +295,32 @@ static int ap6210_gpio_wifi_get_res(void)
 	struct ap6210_gpio_wifi_ops *ops = &ap6210_wifi_select_pm_ops;
 
 	if (SCRIPT_PARSER_OK != script_parser_fetch(wifi_para, "wifi_used", &ops->wifi_used, 1)) {
-		WIFI_WRN("parse wifi_used failed in script.fex.\n" );
+		AP6210_ERR("parse wifi_used failed in script.fex.\n" );
 		return -1;
 	}
 	if (!ops->wifi_used) {
-		WIFI_WRN("wifi pm disable in script.fex.\n" );
+		AP6210_ERR("wifi pm disable in script.fex.\n" );
 		return -1;
 	}
 
 	if (SCRIPT_PARSER_OK != script_parser_fetch(wifi_para, "wifi_sdc_id", &ops->sdio_id, 1)) {
-		WIFI_WRN("parse wifi_sdc_id in script.fex failed.\n" );
+		AP6210_ERR("parse wifi_sdc_id in script.fex failed.\n" );
 		return -1;
 	}
 
 	if (SCRIPT_PARSER_OK != script_parser_fetch(wifi_para, "wifi_usbc_id", &ops->usb_id, 1)) {
-		WIFI_WRN("parse wifi_sdc_id in script.fex failed.\n" );
+		AP6210_ERR("parse wifi_sdc_id in script.fex failed.\n" );
 		return -1;
 	}
 
 	if (SCRIPT_PARSER_OK != script_parser_fetch(wifi_para, "wifi_mod_sel", &ops->module_sel, 1)) {
-		WIFI_WRN("parse wifi_sdc_id in script.fex failed.\n" );
+		AP6210_ERR("parse wifi_sdc_id in script.fex failed.\n" );
 		return -1;
 	}
 
 	ops->mod_name = ap6210_gpio_wifi_get_name(ops->module_sel);
 	
-	WIFI_WRN("select wifi %s\n", ops->mod_name);
+	AP6210_ERR("select wifi %s\n", ops->mod_name);
 
 	return 0;
 }
@@ -339,30 +336,30 @@ static int __devinit ap6210_gpio_wifi_probe(struct platform_device *pdev)
 	case 4: /* RTL8189ES */
 	case 5: /* RTL8192CU */
 	case 6: /* RTL8188EU */
-		WIFI_WRN("Unsupported device.\n");
+		AP6210_ERR("Unsupported device.\n");
 		break;
 	case 7: /* AP6210 */
 	case 8: /* AP6330 */
 	case 9: /* AP6181 */
-		WIFI_INF("Initializing %s.\n", ops->mod_name);
+		AP6210_ERR("Initializing %s.\n", ops->mod_name);
 		ap6210_gpio_init();
 		break;
 	case 10: /* RTL8723AU */
-		WIFI_WRN("Unsupported device.\n");
+		AP6210_ERR("Unsupported device.\n");
 		break;
 	default:
-		WIFI_WRN("Unsupported device.\n");
+		AP6210_ERR("Unsupported device.\n");
 	}
 
 	awwifi_procfs_attach();
-	WIFI_INF("wifi gpio attached.\n" );
+	AP6210_DEBUG("wifi gpio attached.\n" );
 	return 0;
 }
 
 static int __devexit ap6210_gpio_wifi_remove(struct platform_device *pdev)
 {
 	awwifi_procfs_remove();
-	WIFI_INF("wifi gpio released.\n" );
+	AP6210_DEBUG("wifi gpio released.\n" );
 	return 0;
 }
 
@@ -405,7 +402,7 @@ static struct platform_driver ap6210_gpio_wifi_driver = {
 	.remove         = __devexit_p(ap6210_gpio_wifi_remove),
 };
 
-static int __init ap6210_gpio_wifi_init(void)
+int __init ap6210_gpio_wifi_init(void)
 {
 	struct ap6210_gpio_wifi_ops *ops = &ap6210_wifi_select_pm_ops;
 
@@ -418,7 +415,7 @@ static int __init ap6210_gpio_wifi_init(void)
 	return platform_driver_register(&ap6210_gpio_wifi_driver);
 }
 
-static void __exit ap6210_gpio_wifi_exit(void)
+void __exit ap6210_gpio_wifi_exit(void)
 {
 	struct ap6210_gpio_wifi_ops *ops = &ap6210_wifi_select_pm_ops;
 	if (!ops->wifi_used)
@@ -428,12 +425,9 @@ static void __exit ap6210_gpio_wifi_exit(void)
 	memset(ops, 0, sizeof(struct ap6210_gpio_wifi_ops));
 }
 
-
-
-
+/*
 module_init(ap6210_gpio_wifi_init);
 module_exit(ap6210_gpio_wifi_exit);
 
 MODULE_LICENSE("GPL");
-
-
+*/

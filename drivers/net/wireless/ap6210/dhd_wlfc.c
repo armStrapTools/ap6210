@@ -541,8 +541,8 @@ _dhd_wlfc_pullheader(athost_wl_status_info_t* ctx, void* pktbuf)
 	struct bdc_header *h;
 
 	if (PKTLEN(ctx->osh, pktbuf) < BDC_HEADER_LEN) {
-		WLFC_DBGMESG(("%s: rx data too short (%d < %d)\n", __FUNCTION__,
-		           PKTLEN(ctx->osh, pktbuf), BDC_HEADER_LEN));
+		AP6210_DEBUG("%s: rx data too short (%d < %d)\n", __FUNCTION__,
+		           PKTLEN(ctx->osh, pktbuf), BDC_HEADER_LEN);
 		return BCME_ERROR;
 	}
 	h = (struct bdc_header *)PKTDATA(ctx->osh, pktbuf);
@@ -551,8 +551,8 @@ _dhd_wlfc_pullheader(athost_wl_status_info_t* ctx, void* pktbuf)
 	PKTPULL(ctx->osh, pktbuf, BDC_HEADER_LEN);
 
 	if (PKTLEN(ctx->osh, pktbuf) < (h->dataOffset << 2)) {
-		WLFC_DBGMESG(("%s: rx data too short (%d < %d)\n", __FUNCTION__,
-		           PKTLEN(ctx->osh, pktbuf), (h->dataOffset << 2)));
+		AP6210_DEBUG("%s: rx data too short (%d < %d)\n", __FUNCTION__,
+		           PKTLEN(ctx->osh, pktbuf), (h->dataOffset << 2));
 		return BCME_ERROR;
 	}
 
@@ -621,7 +621,7 @@ _dhd_wlfc_rollback_packet_toq(athost_wl_status_info_t* ctx,
 		if (pkt_type == eWLFC_PKTTYPE_SUPPRESSED) {
 			/* wl-header is saved for suppressed packets */
 			if (WLFC_PKTQ_PENQ_HEAD(&entry->psq, ((prec << 1) + 1), p) == NULL) {
-				WLFC_DBGMESG(("Error: %s():%d\n", __FUNCTION__, __LINE__));
+				AP6210_DEBUG("Error: %s():%d\n", __FUNCTION__, __LINE__);
 				rc = BCME_ERROR;
 			}
 		}
@@ -629,7 +629,7 @@ _dhd_wlfc_rollback_packet_toq(athost_wl_status_info_t* ctx,
 			/* remove header first */
 			rc = _dhd_wlfc_pullheader(ctx, p);
 			if (rc != BCME_OK)          {
-				WLFC_DBGMESG(("Error: %s():%d\n", __FUNCTION__, __LINE__));
+				AP6210_DEBUG("Error: %s():%d\n", __FUNCTION__, __LINE__);
 				/* free the hanger slot */
 				dhd_wlfc_hanger_poppkt(ctx->hanger, hslot, &pktout, 1);
 				PKTFREE(ctx->osh, p, TRUE);
@@ -640,7 +640,7 @@ _dhd_wlfc_rollback_packet_toq(athost_wl_status_info_t* ctx,
 			if (pkt_type == eWLFC_PKTTYPE_DELAYED) {
 				/* delay-q packets are going to delay-q */
 				if (WLFC_PKTQ_PENQ_HEAD(&entry->psq, (prec << 1), p) == NULL) {
-					WLFC_DBGMESG(("Error: %s():%d\n", __FUNCTION__, __LINE__));
+					AP6210_DEBUG("Error: %s():%d\n", __FUNCTION__, __LINE__);
 					rc = BCME_ERROR;
 				}
 			}
@@ -660,7 +660,7 @@ _dhd_wlfc_rollback_packet_toq(athost_wl_status_info_t* ctx,
 		}
 	}
 	else {
-		WLFC_DBGMESG(("Error: %s():%d\n", __FUNCTION__, __LINE__));
+		AP6210_DEBUG("Error: %s():%d\n", __FUNCTION__, __LINE__);
 		rc = BCME_ERROR;
 	}
 	if (rc != BCME_OK)
@@ -687,10 +687,10 @@ _dhd_wlfc_flow_control_check(athost_wl_status_info_t* ctx, struct pktq* pq, uint
 		/* start traffic */
 		ctx->hostif_flow_state[if_id] = OFF;
 		/*
-		WLFC_DBGMESG(("qlen:%02d, if:%02d, ->OFF, start traffic %s()\n",
-		pq->len, if_id, __FUNCTION__));
+		AP6210_DEBUG("qlen:%02d, if:%02d, ->OFF, start traffic %s()\n",
+		pq->len, if_id, __FUNCTION__);
 		*/
-		WLFC_DBGMESG(("F"));
+		AP6210_DEBUG("F");
 
 		dhd_txflowcontrol(ctx->dhdp, if_id, OFF);
 
@@ -700,10 +700,10 @@ _dhd_wlfc_flow_control_check(athost_wl_status_info_t* ctx, struct pktq* pq, uint
 		/* stop traffic */
 		ctx->hostif_flow_state[if_id] = ON;
 		/*
-		WLFC_DBGMESG(("qlen:%02d, if:%02d, ->ON, stop traffic   %s()\n",
-		pq->len, if_id, __FUNCTION__));
+		AP6210_DEBUG("qlen:%02d, if:%02d, ->ON, stop traffic   %s()\n",
+		pq->len, if_id, __FUNCTION__);
 		*/
-		WLFC_DBGMESG(("N"));
+		AP6210_DEBUG("N");
 
 		dhd_txflowcontrol(ctx->dhdp, if_id, ON);
 
@@ -738,8 +738,8 @@ _dhd_wlfc_send_signalonly_packet(athost_wl_status_info_t* ctx, wlfc_mac_descript
 		}
 	}
 	else {
-		DHD_ERROR(("%s: couldn't allocate new %d-byte packet\n",
-		           __FUNCTION__, dummylen));
+		AP6210_ERR("%s: couldn't allocate new %d-byte packet\n",
+		           __FUNCTION__, dummylen);
 		rc = BCME_NOMEM;
 	}
 	return rc;
@@ -792,7 +792,7 @@ _dhd_wlfc_enque_suppressed(athost_wl_status_info_t* ctx, int prec, void* p)
 
 	entry = _dhd_wlfc_find_table_entry(ctx, p);
 	if (entry == NULL) {
-		WLFC_DBGMESG(("Error: %s():%d\n", __FUNCTION__, __LINE__));
+		AP6210_DEBUG("Error: %s():%d\n", __FUNCTION__, __LINE__);
 		return BCME_NOTFOUND;
 	}
 	/*
@@ -802,8 +802,8 @@ _dhd_wlfc_enque_suppressed(athost_wl_status_info_t* ctx, int prec, void* p)
 	*/
 	if (WLFC_PKTQ_PENQ(&entry->psq, ((prec << 1) + 1), p) == NULL) {
 		ctx->stats.delayq_full_error++;
-		/* WLFC_DBGMESG(("Error: %s():%d\n", __FUNCTION__, __LINE__)); */
-		WLFC_DBGMESG(("s"));
+		/* AP6210_DEBUG("Error: %s():%d\n", __FUNCTION__, __LINE__); */
+		AP6210_DEBUG("s");
 		return BCME_ERROR;
 	}
 	/* A packet has been pushed, update traffic availability bitmap, if applicable */
@@ -829,7 +829,7 @@ _dhd_wlfc_pretx_pktprocess(athost_wl_status_info_t* ctx,
 	}
 
 	if (entry == NULL) {
-		WLFC_DBGMESG(("Error: %s():%d\n", __FUNCTION__, __LINE__));
+		AP6210_DEBUG("Error: %s():%d\n", __FUNCTION__, __LINE__);
 		return BCME_ERROR;
 	}
 	if (entry->send_tim_signal) {
@@ -885,8 +885,8 @@ _dhd_wlfc_pretx_pktprocess(athost_wl_status_info_t* ctx,
 #endif
 			}
 			else {
-				WLFC_DBGMESG(("%s() hanger_pushpkt() failed, rc: %d\n",
-					__FUNCTION__, rc));
+				AP6210_DEBUG("%s() hanger_pushpkt() failed, rc: %d\n",
+					__FUNCTION__, rc);
 			}
 		}
 	}
@@ -1071,7 +1071,7 @@ _dhd_wlfc_prec_enq_with_drop(dhd_pub_t *dhdp, struct pktq *pq, void *pkt, int pr
 	else if (pktq_full(pq)) {
 		p = _dhd_wlfc_pktq_peek_tail(pq, &eprec);
 		if (!p) {
-			WLFC_DBGMESG(("Error: %s():%d\n", __FUNCTION__, __LINE__));
+			AP6210_DEBUG("Error: %s():%d\n", __FUNCTION__, __LINE__);
 			return FALSE;
 		}
 		if ((eprec > prec) || (eprec < 0)) {
@@ -1094,7 +1094,7 @@ _dhd_wlfc_prec_enq_with_drop(dhd_pub_t *dhdp, struct pktq *pq, void *pkt, int pr
 	/* Enqueue */
 	p = pktq_penq(pq, prec, pkt);
 	if (!p) {
-		WLFC_DBGMESG(("Error: %s():%d\n", __FUNCTION__, __LINE__));
+		AP6210_DEBUG("Error: %s():%d\n", __FUNCTION__, __LINE__);
 		return FALSE;
 	}
 
@@ -1110,7 +1110,7 @@ _dhd_wlfc_enque_delayq(athost_wl_status_info_t* ctx, void* pktbuf, int prec)
 		entry = _dhd_wlfc_find_table_entry(ctx, pktbuf);
 
 		if (entry == NULL) {
-			WLFC_DBGMESG(("Error: %s():%d\n", __FUNCTION__, __LINE__));
+			AP6210_DEBUG("Error: %s():%d\n", __FUNCTION__, __LINE__);
 			return BCME_ERROR;
 		}
 
@@ -1121,7 +1121,7 @@ _dhd_wlfc_enque_delayq(athost_wl_status_info_t* ctx, void* pktbuf, int prec)
 		*/
 		if (_dhd_wlfc_prec_enq_with_drop(ctx->dhdp, &entry->psq, pktbuf, (prec << 1))
 			== FALSE) {
-			WLFC_DBGMESG(("D"));
+			AP6210_DEBUG("D");
 			/* dhd_txcomplete(ctx->dhdp, pktbuf, FALSE); */
 			PKTFREE(ctx->osh, pktbuf, TRUE);
 			ctx->stats.delayq_full_error++;
@@ -1206,7 +1206,7 @@ _dhd_wlfc_borrow_credit(athost_wl_status_info_t* ctx, uint8 available_credit_map
 	int rc = BCME_ERROR;
 
 	if (ctx == NULL || available_credit_map == 0) {
-		WLFC_DBGMESG(("Error: %s():%d\n", __FUNCTION__, __LINE__));
+		AP6210_DEBUG("Error: %s():%d\n", __FUNCTION__, __LINE__);
 		return BCME_BADARG;
 	}
 
@@ -1323,7 +1323,7 @@ dhd_wlfc_commit_packets(void* state, f_commitpkt_t fcommit, void* commit_ctx, vo
 
 	if ((state == NULL) ||
 		(fcommit == NULL)) {
-		WLFC_DBGMESG(("Error: %s():%d\n", __FUNCTION__, __LINE__));
+		AP6210_DEBUG("Error: %s():%d\n", __FUNCTION__, __LINE__);
 		return BCME_BADARG;
 	}
 
@@ -1364,8 +1364,8 @@ dhd_wlfc_commit_packets(void* state, f_commitpkt_t fcommit, void* commit_ctx, vo
 				} else {
 					bus_retry_count++;
 					if (bus_retry_count >= BUS_RETRIES) {
-						DHD_ERROR((" %s: bus error %d\n",
-							__FUNCTION__, rc));
+						AP6210_ERR(" %s: bus error %d\n",
+							__FUNCTION__, rc);
 						return rc;
 					}
 				}
@@ -1414,7 +1414,7 @@ dhd_wlfc_commit_packets(void* state, f_commitpkt_t fcommit, void* commit_ctx, vo
 			else {
 				bus_retry_count++;
 				if (bus_retry_count >= BUS_RETRIES) {
-					DHD_ERROR(("%s: bus error %d\n", __FUNCTION__, rc));
+					AP6210_ERR("%s: bus error %d\n", __FUNCTION__, rc);
 					ctx->FIFO_credit[ac] -= credit;
 					return rc;
 				}
@@ -1498,7 +1498,7 @@ dhd_wlfc_commit_packets(void* state, f_commitpkt_t fcommit, void* commit_ctx, vo
 		else {
 			bus_retry_count++;
 			if (bus_retry_count >= BUS_RETRIES) {
-				DHD_ERROR(("%s: bus error %d\n", __FUNCTION__, rc));
+				AP6210_ERR("%s: bus error %d\n", __FUNCTION__, rc);
 				return rc;
 			}
 		}
@@ -1541,8 +1541,8 @@ dhd_wlfc_txcomplete(dhd_pub_t *dhd, void *txp, bool success)
 		return;
 	}
 	if (!success) {
-		WLFC_DBGMESG(("At: %s():%d, bus_complete() failure for %p, htod_tag:0x%08x\n",
-			__FUNCTION__, __LINE__, txp, DHD_PKTTAG_H2DTAG(PKTTAG(txp))));
+		AP6210_DEBUG("At: %s():%d, bus_complete() failure for %p, htod_tag:0x%08x\n",
+			__FUNCTION__, __LINE__, txp, DHD_PKTTAG_H2DTAG(PKTTAG(txp)));
 		dhd_wlfc_hanger_poppkt(wlfc->hanger, WLFC_PKTID_HSLOT_GET(DHD_PKTTAG_H2DTAG
 			(PKTTAG(txp))), &p, 1);
 
@@ -1960,7 +1960,7 @@ dhd_wlfc_dbg_senum_check(dhd_pub_t *dhd, uint8 *value)
 	(void)dhd;
 
 	bcopy(&value[2], &timestamp, sizeof(uint32));
-	DHD_INFO(("RXPKT: SEQ: %d, timestamp %d\n", value[1], timestamp));
+	AP6210_DEBUG("RXPKT: SEQ: %d, timestamp %d\n", value[1], timestamp);
 	return BCME_OK;
 }
 
@@ -1985,10 +1985,10 @@ dhd_wlfc_mac_table_update(dhd_pub_t *dhd, uint8* value, uint8 type)
 	uint8 ifid;
 	uint8* ea;
 
-	WLFC_DBGMESG(("%s(), mac [%02x:%02x:%02x:%02x:%02x:%02x],%s,idx:%d,id:0x%02x\n",
+	AP6210_DEBUG("%s(), mac [%02x:%02x:%02x:%02x:%02x:%02x],%s,idx:%d,id:0x%02x\n",
 		__FUNCTION__, value[2], value[3], value[4], value[5], value[6], value[7],
 		((type == WLFC_CTL_TYPE_MACDESC_ADD) ? "ADD":"DEL"),
-		WLFC_MAC_DESC_GET_LOOKUP_INDEX(value[0]), value[0]));
+		WLFC_MAC_DESC_GET_LOOKUP_INDEX(value[0]), value[0]);
 
 	table = wlfc->destination_entries.nodes;
 	table_index = WLFC_MAC_DESC_GET_LOOKUP_INDEX(value[0]);
@@ -2095,11 +2095,11 @@ dhd_wlfc_interface_update(dhd_pub_t *dhd, uint8* value, uint8 type)
 		if (table[if_id].occupied) {
 			if (type == WLFC_CTL_TYPE_INTERFACE_OPEN) {
 				table[if_id].state = WLFC_STATE_OPEN;
-				/* WLFC_DBGMESG(("INTERFACE[%d] OPEN\n", if_id)); */
+				/* AP6210_DEBUG("INTERFACE[%d] OPEN\n", if_id); */
 			}
 			else {
 				table[if_id].state = WLFC_STATE_CLOSE;
-				/* WLFC_DBGMESG(("INTERFACE[%d] CLOSE\n", if_id)); */
+				/* AP6210_DEBUG("INTERFACE[%d] CLOSE\n", if_id); */
 			}
 			return BCME_OK;
 		}
@@ -2269,15 +2269,15 @@ dhd_wlfc_init(dhd_pub_t *dhd)
 	/* enable proptxtstatus signaling by default */
 	bcm_mkiovar("tlv", (char *)&tlv, 4, iovbuf, sizeof(iovbuf));
 	if (dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0) < 0) {
-		DHD_ERROR(("dhd_wlfc_init(): failed to enable/disable bdcv2 tlv signaling\n"));
+		AP6210_ERR("dhd_wlfc_init(): failed to enable/disable bdcv2 tlv signaling\n");
 	}
 	else {
 		/*
 		Leaving the message for now, it should be removed after a while; once
 		the tlv situation is stable.
 		*/
-		DHD_ERROR(("dhd_wlfc_init(): successfully %s bdcv2 tlv signaling, %d\n",
-			dhd->wlfc_enabled?"enabled":"disabled", tlv));
+		AP6210_ERR("dhd_wlfc_init(): successfully %s bdcv2 tlv signaling, %d\n",
+			dhd->wlfc_enabled?"enabled":"disabled", tlv);
 	}
 	return BCME_OK;
 }
@@ -2309,7 +2309,7 @@ dhd_wlfc_enable(dhd_pub_t *dhd)
 	if (wlfc->hanger == NULL) {
 		MFREE(dhd->osh, dhd->wlfc_state, sizeof(athost_wl_status_info_t));
 		dhd->wlfc_state = NULL;
-		DHD_ERROR(("Failed to malloc dhd->wlfc_state\n"));
+		AP6210_ERR("Failed to malloc dhd->wlfc_state\n");
 		return BCME_NOMEM;
 	}
 
@@ -2357,8 +2357,8 @@ dhd_wlfc_cleanup(dhd_pub_t *dhd, ifpkt_cb_t fn, int arg)
 	for (i = 0; i < total_entries; i++) {
 		if (table[i].occupied && (fn == NULL || (arg == table[i].interface_id))) {
 			if (table[i].psq.len) {
-				WLFC_DBGMESG(("%s(): DELAYQ[%d].len = %d\n",
-					__FUNCTION__, i, table[i].psq.len));
+				AP6210_DEBUG("%s(): DELAYQ[%d].len = %d\n",
+					__FUNCTION__, i, table[i].psq.len);
 				/* release packets held in DELAYQ */
 				pktq_flush(wlfc->osh, &table[i].psq, TRUE, fn, arg);
 			}
@@ -2421,9 +2421,9 @@ dhd_wlfc_deinit(dhd_pub_t *dhd)
 		wlfc_hanger_t* h = (wlfc_hanger_t*)wlfc->hanger;
 		for (i = 0; i < h->max_items; i++) {
 			if (h->items[i].state != WLFC_HANGER_ITEM_STATE_FREE) {
-				WLFC_DBGMESG(("%s() pkt[%d] = 0x%p, FIFO_credit_used:%d\n",
+				AP6210_DEBUG("%s() pkt[%d] = 0x%p, FIFO_credit_used:%d\n",
 					__FUNCTION__, i, h->items[i].pkt,
-					DHD_PKTTAG_CREDITCHECK(PKTTAG(h->items[i].pkt))));
+					DHD_PKTTAG_CREDITCHECK(PKTTAG(h->items[i].pkt)));
 			}
 		}
 	}

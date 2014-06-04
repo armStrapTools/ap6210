@@ -173,7 +173,7 @@ extern int osl_error(int bcmerror);
 #else
 #define OSL_SYSUPTIME()		((uint32)jiffies * (1000 / HZ))
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 29) */
-#define	printf(fmt, args...)	printk(fmt , ## args)
+#define	printf(fmt, args...)	pr_info(fmt , ## args)
 #include <linux/kernel.h>	/* for vsn/printf's */
 #include <linux/string.h>	/* for mem*, str* */
 /* bcopy's: Linux kernel doesn't provide these (anymore) */

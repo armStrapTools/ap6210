@@ -38,9 +38,7 @@
 #include <plat/gpio.h>
 
 #include <ap6210_gpio.h>
-
-#define WL_ERROR(x) printf x
-#define WL_TRACE(x) printf x
+#include <ap6210.h>
 
 extern void sunximmc_rescan_card(unsigned id, unsigned insert);
 
@@ -102,7 +100,7 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 
 #elif defined(CUSTOMER_OOB)
 	host_oob_irq = bcm_wlan_get_oob_irq();
-	pr_info("bcmdhd: irq=%d, flags=0x%08lx\n", host_oob_irq, *irq_flags_ptr);
+	AP6210_DEBUG("irq=%d, flags=0x%08lx\n", host_oob_irq, *irq_flags_ptr);
 #else
 #if defined(CUSTOM_OOB_GPIO_NUM)
 	if (dhd_oob_gpio_num < 0) {
@@ -111,16 +109,16 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 #endif /* CUSTOMER_OOB_GPIO_NUM */
 
 	if (dhd_oob_gpio_num < 0) {
-		WL_ERROR(("%s: ERROR customer specific Host GPIO is NOT defined \n",
-		__FUNCTION__));
+		AP6210_ERR("%s: ERROR customer specific Host GPIO is NOT defined \n",
+		__FUNCTION__);
 		return (dhd_oob_gpio_num);
 	}
 
-	WL_ERROR(("%s: customer specific Host GPIO number is (%d)\n",
-	         __FUNCTION__, dhd_oob_gpio_num));
+	AP6210_ERR("%s: customer specific Host GPIO number is (%d)\n",
+	         __FUNCTION__, dhd_oob_gpio_num);
 
 #if defined CUSTOMER_HW
-	pr_err("%s: should not be here!\n", __FUNCTION__);
+	AP6210_ERR("%s: should not be here!\n", __FUNCTION__);
 #elif defined CUSTOMER_HW3
 	gpio_request(dhd_oob_gpio_num, "oob irq");
 	host_oob_irq = gpio_to_irq(dhd_oob_gpio_num);
@@ -140,8 +138,8 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 
 	switch (onoff) {
 		case WLAN_RESET_OFF:
-			WL_TRACE(("%s: call customer specific GPIO to insert WLAN RESET\n",
-				__FUNCTION__));
+			AP6210_DEBUG("%s: call customer specific GPIO to insert WLAN RESET\n",
+				__FUNCTION__);
 #ifdef CUSTOMER_HW
 			ap6210_gpio_wifi_power(0);
 #endif /* CUSTOMER_HW */
@@ -149,12 +147,12 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 			wifi_set_power(0, 0);
 #endif
 			mdelay(100);
-			WL_ERROR(("=========== WLAN placed in RESET ========\n"));
+			AP6210_ERR("WLAN placed in RESET\n");
 		break;
 
 		case WLAN_RESET_ON:
-			WL_TRACE(("%s: callc customer specific GPIO to remove WLAN RESET\n",
-				__FUNCTION__));
+			AP6210_DEBUG("%s: callc customer specific GPIO to remove WLAN RESET\n",
+				__FUNCTION__);
 #ifdef CUSTOMER_HW
 			ap6210_gpio_wifi_power(1);
 #endif /* CUSTOMER_HW */
@@ -162,29 +160,29 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 			wifi_set_power(1, 0);
 #endif
 			mdelay(100);
-			WL_ERROR(("=========== WLAN going back to live  ========\n"));
+			AP6210_ERR("WLAN going back to live\n");
 		break;
 
 		case WLAN_POWER_OFF:
-			WL_TRACE(("%s: call customer specific GPIO to turn off WL_REG_ON\n",
-				__FUNCTION__));
+			AP6210_DEBUG("%s: call customer specific GPIO to turn off WL_REG_ON\n",
+				__FUNCTION__);
 #ifdef CUSTOMER_HW
 			ap6210_gpio_wifi_power(0);
 			sunximmc_rescan_card(sdc_id, 0);
 #endif /* CUSTOMER_HW */
-			WL_ERROR(("=========== WLAN placed in POWER OFF ========\n"));
+			AP6210_ERR("WLAN placed in POWER OFF\n");
 		break;
 
 		case WLAN_POWER_ON:
-			WL_TRACE(("%s: call customer specific GPIO to turn on WL_REG_ON\n",
-				__FUNCTION__));
+			AP6210_DEBUG("%s: call customer specific GPIO to turn on WL_REG_ON\n",
+				__FUNCTION__);
 #ifdef CUSTOMER_HW
 			ap6210_gpio_wifi_power(1);
 			sunximmc_rescan_card(sdc_id, 1);
 			/* Lets customer power to get stable */
 #endif /* CUSTOMER_HW */
 			mdelay(100);
-			WL_ERROR(("=========== WLAN placed in POWER ON ========\n"));
+			AP6210_ERR("WLAN placed in POWER ON\n");
 		break;
 	}
 }
@@ -196,7 +194,7 @@ dhd_custom_get_mac_address(unsigned char *buf)
 {
 	int ret = 0;
 
-	WL_TRACE(("%s Enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s Enter\n", __FUNCTION__);
 	if (!buf)
 		return -EINVAL;
 

@@ -100,19 +100,19 @@ _dhd_pno_clean(dhd_pub_t *dhd)
 	NULL_CHECK(dhd, "dhd is NULL", err);
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL", err);
 	_pno_state = PNO_GET_PNOSTATE(dhd);
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	/* Disable PNO */
 	err = dhd_iovar(dhd, 0, "pfn", (char *)&pfn, sizeof(pfn), 1);
 	if (err < 0) {
-		DHD_ERROR(("%s : failed to execute pfn(error : %d)\n",
-			__FUNCTION__, err));
+		AP6210_ERR("%s : failed to execute pfn(error : %d)\n",
+			__FUNCTION__, err);
 		goto exit;
 	}
 	_pno_state->pno_status = DHD_PNO_DISABLED;
 	err = dhd_iovar(dhd, 0, "pfnclear", NULL, 0, 1);
 	if (err < 0) {
-		DHD_ERROR(("%s : failed to execute pfnclear(error : %d)\n",
-			__FUNCTION__, err));
+		AP6210_ERR("%s : failed to execute pfnclear(error : %d)\n",
+			__FUNCTION__, err);
 	}
 exit:
 	return err;
@@ -126,10 +126,10 @@ _dhd_pno_suspend(dhd_pub_t *dhd)
 	dhd_pno_status_info_t *_pno_state;
 	NULL_CHECK(dhd, "dhd is NULL", err);
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL", err);
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	err = dhd_iovar(dhd, 0, "pfn_suspend", (char *)&suspend, sizeof(suspend), 1);
 	if (err < 0) {
-		DHD_ERROR(("%s : failed to suspend pfn(error :%d)\n", __FUNCTION__, err));
+		AP6210_ERR("%s : failed to suspend pfn(error :%d)\n", __FUNCTION__, err);
 		goto exit;
 
 	}
@@ -145,23 +145,23 @@ _dhd_pno_enable(dhd_pub_t *dhd, int enable)
 	NULL_CHECK(dhd, "dhd is NULL", err);
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL", err);
 	_pno_state = PNO_GET_PNOSTATE(dhd);
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 
 	if (enable & 0xfffe) {
-		DHD_ERROR(("%s invalid value\n", __FUNCTION__));
+		AP6210_ERR("%s invalid value\n", __FUNCTION__);
 		err = BCME_BADARG;
 		goto exit;
 	}
 	if (!dhd_support_sta_mode(dhd)) {
-		DHD_ERROR(("PNO is not allowed for non-STA mode"));
+		AP6210_ERR("PNO is not allowed for non-STA mode");
 		err = BCME_BADOPTION;
 		goto exit;
 	}
 	if (enable) {
 		if ((_pno_state->pno_mode & DHD_PNO_LEGACY_MODE) &&
 			dhd_is_associated(dhd, NULL, NULL)) {
-			DHD_ERROR(("%s Legacy PNO mode cannot be enabled "
-				"in assoc mode , ignore it\n", __FUNCTION__));
+			AP6210_ERR("%s Legacy PNO mode cannot be enabled "
+				"in assoc mode , ignore it\n", __FUNCTION__);
 			err = BCME_BADOPTION;
 			goto exit;
 		}
@@ -169,7 +169,7 @@ _dhd_pno_enable(dhd_pub_t *dhd, int enable)
 	/* Enable/Disable PNO */
 	err = dhd_iovar(dhd, 0, "pfn", (char *)&enable, sizeof(enable), 1);
 	if (err < 0) {
-		DHD_ERROR(("%s : failed to execute pfn_set\n", __FUNCTION__));
+		AP6210_ERR("%s : failed to execute pfn_set\n", __FUNCTION__);
 		goto exit;
 	}
 	_pno_state->pno_status = (enable)?
@@ -177,8 +177,8 @@ _dhd_pno_enable(dhd_pub_t *dhd, int enable)
 	if (!enable)
 		_pno_state->pno_mode = DHD_PNO_NONE_MODE;
 
-	DHD_PNO(("%s set pno as %s\n",
-		__FUNCTION__, enable ? "Enable" : "Disable"));
+	AP6210_DEBUG("%s set pno as %s\n",
+		__FUNCTION__, enable ? "Enable" : "Disable");
 exit:
 	return err;
 }
@@ -191,7 +191,7 @@ _dhd_pno_set(dhd_pub_t *dhd, const dhd_pno_params_t *pno_params, dhd_pno_mode_t 
 	dhd_pno_params_t *_params;
 	dhd_pno_status_info_t *_pno_state;
 	bool combined_scan = FALSE;
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 
 	NULL_CHECK(dhd, "dhd is NULL", err);
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL", err);
@@ -215,11 +215,11 @@ _dhd_pno_set(dhd_pub_t *dhd, const dhd_pno_params_t *pno_params, dhd_pno_mode_t 
 		if (pno_params->params_legacy.scan_fr != 0)
 			pfn_param.scan_freq = htod32(pno_params->params_legacy.scan_fr);
 		if (_pno_state->pno_mode & DHD_PNO_BATCH_MODE) {
-			DHD_PNO(("will enable combined scan with BATCHIG SCAN MODE\n"));
+			AP6210_DEBUG("will enable combined scan with BATCHIG SCAN MODE\n");
 			mode |= DHD_PNO_BATCH_MODE;
 			combined_scan = TRUE;
 		} else if (_pno_state->pno_mode & DHD_PNO_HOTLIST_MODE) {
-			DHD_PNO(("will enable combined scan with HOTLIST SCAN MODE\n"));
+			AP6210_DEBUG("will enable combined scan with HOTLIST SCAN MODE\n");
 			mode |= DHD_PNO_HOTLIST_MODE;
 			combined_scan = TRUE;
 		}
@@ -289,8 +289,8 @@ _dhd_pno_set(dhd_pub_t *dhd, const dhd_pno_params_t *pno_params, dhd_pno_mode_t 
 	}
 	if (pfn_param.scan_freq < htod32(PNO_SCAN_MIN_FW_SEC) ||
 		pfn_param.scan_freq > htod32(PNO_SCAN_MAX_FW_SEC)) {
-		DHD_ERROR(("%s pno freq(%d sec) is not valid \n",
-			__FUNCTION__, PNO_SCAN_MIN_FW_SEC));
+		AP6210_ERR("%s pno freq(%d sec) is not valid \n",
+			__FUNCTION__, PNO_SCAN_MIN_FW_SEC);
 		err = BCME_BADARG;
 		goto exit;
 	}
@@ -299,21 +299,21 @@ _dhd_pno_set(dhd_pub_t *dhd, const dhd_pno_params_t *pno_params, dhd_pno_mode_t 
 		/* set bestn to calculate the max mscan which firmware supports */
 		err = dhd_iovar(dhd, 0, "pfnmem", (char *)&_tmp, sizeof(_tmp), 1);
 		if (err < 0) {
-			DHD_ERROR(("%s : failed to set pfnmscan\n", __FUNCTION__));
+			AP6210_ERR("%s : failed to set pfnmscan\n", __FUNCTION__);
 			goto exit;
 		}
 		/* get max mscan which the firmware supports */
 		err = dhd_iovar(dhd, 0, "pfnmem", (char *)&_tmp, sizeof(_tmp), 0);
 		if (err < 0) {
-			DHD_ERROR(("%s : failed to get pfnmscan\n", __FUNCTION__));
+			AP6210_ERR("%s : failed to get pfnmscan\n", __FUNCTION__);
 			goto exit;
 		}
-		DHD_PNO((" returned mscan : %d, set bestn : %d\n", _tmp, pfn_param.bestn));
+		AP6210_DEBUG(" returned mscan : %d, set bestn : %d\n", _tmp, pfn_param.bestn);
 		pfn_param.mscan = MIN(pfn_param.mscan, _tmp);
 	}
 	err = dhd_iovar(dhd, 0, "pfn_set", (char *)&pfn_param, sizeof(pfn_param), 1);
 	if (err < 0) {
-		DHD_ERROR(("%s : failed to execute pfn_set\n", __FUNCTION__));
+		AP6210_ERR("%s : failed to execute pfn_set\n", __FUNCTION__);
 		goto exit;
 	}
 	/* need to return mscan if this is for batch scan instead of err */
@@ -335,14 +335,14 @@ _dhd_pno_add_ssid(dhd_pub_t *dhd, wlc_ssid_t* ssids_list, int nssid)
 	{
 		int j;
 		for (j = 0; j < nssid; j++) {
-			DHD_PNO(("%d: scan  for  %s size = %d\n", j,
-				ssids_list[j].SSID, ssids_list[j].SSID_len));
+			AP6210_DEBUG("%d: scan  for  %s size = %d\n", j,
+				ssids_list[j].SSID, ssids_list[j].SSID_len);
 		}
 	}
 	/* Check for broadcast ssid */
 	for (i = 0; i < nssid; i++) {
 		if (!ssids_list[i].SSID_len) {
-			DHD_ERROR(("%d: Broadcast SSID is ilegal for PNO setting\n", i));
+			AP6210_ERR("%d: Broadcast SSID is ilegal for PNO setting\n", i);
 			err = BCME_ERROR;
 			goto exit;
 		}
@@ -361,7 +361,7 @@ _dhd_pno_add_ssid(dhd_pub_t *dhd, wlc_ssid_t* ssids_list, int nssid)
 		err = dhd_iovar(dhd, 0, "pfn_add", (char *)&pfn_element,
 			sizeof(pfn_element), 1);
 		if (err < 0) {
-			DHD_ERROR(("%s : failed to execute pfn_add\n", __FUNCTION__));
+			AP6210_ERR("%s : failed to execute pfn_add\n", __FUNCTION__);
 			goto exit;
 		}
 	}
@@ -425,7 +425,7 @@ _dhd_pno_get_channels(dhd_pub_t *dhd, uint16 *d_chan_list,
 	list->count = htod32(WL_NUMCHANNELS);
 	err = dhd_wl_ioctl_cmd(dhd, WLC_GET_VALID_CHANNELS, chan_buf, sizeof(chan_buf), FALSE, 0);
 	if (err < 0) {
-		DHD_ERROR(("failed to get channel list (err: %d)\n", err));
+		AP6210_ERR("failed to get channel list (err: %d)\n", err);
 		goto exit;
 	}
 	for (i = 0, j = 0; i < dtoh32(list->count) && i < *nchan; i++) {
@@ -471,7 +471,7 @@ _dhd_pno_convert_format(dhd_pub_t *dhd, struct dhd_pno_batch_params *params_batc
 		NULL_CHECK(buf, "buf is NULL", err);
 	/* initialize the buffer */
 	memset(buf, 0, nbufsize);
-	DHD_PNO(("%s enter \n", __FUNCTION__));
+	AP6210_DEBUG("%s enter \n", __FUNCTION__);
 	/* # of scans */
 	if (!params_batch->get_batch.batch_started) {
 		bp += nreadsize = sprintf(bp, "scancount=%d\n",
@@ -479,7 +479,7 @@ _dhd_pno_convert_format(dhd_pub_t *dhd, struct dhd_pno_batch_params *params_batc
 		nleftsize -= nreadsize;
 		params_batch->get_batch.batch_started = TRUE;
 	}
-	DHD_PNO(("%s scancount %d\n", __FUNCTION__, params_batch->get_batch.expired_tot_scan_cnt));
+	AP6210_DEBUG("%s scancount %d\n", __FUNCTION__, params_batch->get_batch.expired_tot_scan_cnt);
 	/* preestimate scan count until which scan result this report is going to end */
 	list_for_each_entry_safe(siter, snext,
 		&params_batch->get_batch.expired_scan_results_list, list) {
@@ -492,7 +492,7 @@ _dhd_pno_convert_format(dhd_pub_t *dhd, struct dhd_pno_batch_params *params_batc
 			/* increase scan count */
 			cnt++;
 			/* # best of each scan */
-			DHD_PNO(("\n<loop : %d, apcount %d>\n", cnt - 1, phead->tot_cnt));
+			AP6210_DEBUG("<loop : %d, apcount %d>\n", cnt - 1, phead->tot_cnt);
 			/* attribute of the scan */
 			if (phead->reason & PNO_STATUS_ABORT_MASK) {
 				bp += nreadsize = sprintf(bp, "trunc\n");
@@ -539,11 +539,11 @@ _dhd_pno_convert_format(dhd_pub_t *dhd, struct dhd_pno_batch_params *params_batc
 				MFREE(dhd->osh, iter, BESTNET_ENTRY_SIZE);
 #ifdef PNO_DEBUG
 				memcpy(msg, _base_bp, bp - _base_bp);
-				DHD_PNO(("Entry : \n%s", msg));
+				AP6210_DEBUG("Entry : \n%s", msg);
 #endif
 			}
 			bp += nreadsize = sprintf(bp, "%s", SCAN_END_MARKER);
-			DHD_PNO(("%s", SCAN_END_MARKER));
+			AP6210_DEBUG("%s", SCAN_END_MARKER);
 			nleftsize -= nreadsize;
 			pprev = phead;
 			/* reset the header */
@@ -560,17 +560,17 @@ _dhd_pno_convert_format(dhd_pub_t *dhd, struct dhd_pno_batch_params *params_batc
 	}
 exit:
 	if (cnt < params_batch->get_batch.expired_tot_scan_cnt) {
-		DHD_ERROR(("Buffer size is small to save all batch entry,"
+		AP6210_ERR("Buffer size is small to save all batch entry,"
 			" cnt : %d (remained_scan_cnt): %d\n",
-			cnt, params_batch->get_batch.expired_tot_scan_cnt - cnt));
+			cnt, params_batch->get_batch.expired_tot_scan_cnt - cnt);
 	}
 	params_batch->get_batch.expired_tot_scan_cnt -= cnt;
 	/* set FALSE only if the link list  is empty after returning the data */
 	if (list_empty(&params_batch->get_batch.expired_scan_results_list)) {
 		params_batch->get_batch.batch_started = FALSE;
 		bp += sprintf(bp, "%s", RESULTS_END_MARKER);
-		DHD_PNO(("%s", RESULTS_END_MARKER));
-		DHD_PNO(("%s : Getting the batching data is complete\n", __FUNCTION__));
+		AP6210_DEBUG("%s", RESULTS_END_MARKER);
+		AP6210_DEBUG("%s : Getting the batching data is complete\n", __FUNCTION__);
 	}
 	/* return used memory in buffer */
 	bytes_written = (int32)(bp - buf);
@@ -587,7 +587,7 @@ _dhd_pno_clear_all_batch_results(dhd_pub_t *dhd, struct list_head *head, bool on
 	NULL_CHECK(dhd, "dhd is NULL", err);
 	NULL_CHECK(head, "head is NULL", err);
 	NULL_CHECK(head->next, "head->next is NULL", err);
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	list_for_each_entry_safe(siter, snext,
 		head, list) {
 		if (only_last) {
@@ -629,7 +629,7 @@ _dhd_pno_cfg(dhd_pub_t *dhd, uint16 *channel_list, int nchan)
 	if (nchan) {
 		NULL_CHECK(channel_list, "nchan is NULL", err);
 	}
-	DHD_PNO(("%s enter :  nchan : %d\n", __FUNCTION__, nchan));
+	AP6210_DEBUG("%s enter :  nchan : %d\n", __FUNCTION__, nchan);
 	memset(&pfncfg_param, 0, sizeof(wl_pfn_cfg_t));
 	/* Setup default values */
 	pfncfg_param.reporttype = htod32(WL_PFN_REPORT_ALLNET);
@@ -641,7 +641,7 @@ _dhd_pno_cfg(dhd_pub_t *dhd, uint16 *channel_list, int nchan)
 	pfncfg_param.channel_num = htod32(nchan);
 	err = dhd_iovar(dhd, 0, "pfn_cfg", (char *)&pfncfg_param, sizeof(pfncfg_param), 1);
 	if (err < 0) {
-		DHD_ERROR(("%s : failed to execute pfn_cfg\n", __FUNCTION__));
+		AP6210_ERR("%s : failed to execute pfn_cfg\n", __FUNCTION__);
 		goto exit;
 	}
 exit:
@@ -654,7 +654,7 @@ _dhd_pno_reinitialize_prof(dhd_pub_t *dhd, dhd_pno_params_t *params, dhd_pno_mod
 	dhd_pno_status_info_t *_pno_state;
 	NULL_CHECK(dhd, "dhd is NULL\n", err);
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL\n", err);
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	_pno_state = PNO_GET_PNOSTATE(dhd);
 	mutex_lock(&_pno_state->pno_mutex);
 	switch (mode) {
@@ -718,7 +718,7 @@ _dhd_pno_reinitialize_prof(dhd_pub_t *dhd, dhd_pno_params_t *params, dhd_pno_mod
 		break;
 	}
 	default:
-		DHD_ERROR(("%s : unknown mode : %d\n", __FUNCTION__, mode));
+		AP6210_ERR("%s : unknown mode : %d\n", __FUNCTION__, mode);
 		break;
 	}
 	mutex_unlock(&_pno_state->pno_mutex);
@@ -735,7 +735,7 @@ _dhd_pno_add_bssid(dhd_pub_t *dhd, wl_pfn_bssid_t *p_pfn_bssid, int nbssid)
 	err = dhd_iovar(dhd, 0, "pfn_add_bssid", (char *)&p_pfn_bssid,
 		sizeof(wl_pfn_bssid_t) * nbssid, 1);
 	if (err < 0) {
-		DHD_ERROR(("%s : failed to execute pfn_cfg\n", __FUNCTION__));
+		AP6210_ERR("%s : failed to execute pfn_cfg\n", __FUNCTION__);
 		goto exit;
 	}
 exit:
@@ -753,10 +753,10 @@ dhd_pno_stop_for_ssid(dhd_pub_t *dhd)
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL", err);
 	_pno_state = PNO_GET_PNOSTATE(dhd);
 	if (!(_pno_state->pno_mode & DHD_PNO_LEGACY_MODE)) {
-		DHD_ERROR(("%s : LEGACY PNO MODE is not enabled\n", __FUNCTION__));
+		AP6210_ERR("%s : LEGACY PNO MODE is not enabled\n", __FUNCTION__);
 		goto exit;
 	}
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	_pno_state->pno_mode &= ~DHD_PNO_LEGACY_MODE;
 	/* restart Batch mode  if the batch mode is on */
 	if (_pno_state->pno_mode & (DHD_PNO_BATCH_MODE | DHD_PNO_HOTLIST_MODE)) {
@@ -773,8 +773,8 @@ dhd_pno_stop_for_ssid(dhd_pub_t *dhd)
 			err = dhd_pno_set_for_batch(dhd, &_params->params_batch);
 			if (err < 0) {
 				_pno_state->pno_mode &= ~DHD_PNO_BATCH_MODE;
-				DHD_ERROR(("%s : failed to restart batch scan(err: %d)\n",
-					__FUNCTION__, err));
+				AP6210_ERR("%s : failed to restart batch scan(err: %d)\n",
+					__FUNCTION__, err);
 				goto exit;
 			}
 		} else if (_pno_state->pno_mode & DHD_PNO_HOTLIST_MODE) {
@@ -784,9 +784,9 @@ dhd_pno_stop_for_ssid(dhd_pub_t *dhd)
 			p_pfn_bssid = kzalloc(sizeof(wl_pfn_bssid_t) *
 			_params->params_hotlist.nbssid, GFP_KERNEL);
 			if (p_pfn_bssid == NULL) {
-				DHD_ERROR(("%s : failed to allocate wl_pfn_bssid_t array"
+				AP6210_ERR("%s : failed to allocate wl_pfn_bssid_t array"
 				" (count: %d)",
-					__FUNCTION__, _params->params_hotlist.nbssid));
+					__FUNCTION__, _params->params_hotlist.nbssid);
 				err = BCME_ERROR;
 				_pno_state->pno_mode &= ~DHD_PNO_HOTLIST_MODE;
 				goto exit;
@@ -802,16 +802,16 @@ dhd_pno_stop_for_ssid(dhd_pub_t *dhd)
 			err = dhd_pno_set_for_hotlist(dhd, p_pfn_bssid, &_params->params_hotlist);
 			if (err < 0) {
 				_pno_state->pno_mode &= ~DHD_PNO_HOTLIST_MODE;
-				DHD_ERROR(("%s : failed to restart hotlist scan(err: %d)\n",
-					__FUNCTION__, err));
+				AP6210_ERR("%s : failed to restart hotlist scan(err: %d)\n",
+					__FUNCTION__, err);
 				goto exit;
 			}
 		}
 	} else {
 		err = _dhd_pno_clean(dhd);
 		if (err < 0) {
-			DHD_ERROR(("%s : failed to call _dhd_pno_clean (err: %d)\n",
-				__FUNCTION__, err));
+			AP6210_ERR("%s : failed to call _dhd_pno_clean (err: %d)\n",
+				__FUNCTION__, err);
 			goto exit;
 		}
 	}
@@ -824,7 +824,7 @@ dhd_pno_enable(dhd_pub_t *dhd, int enable)
 {
 	int err = BCME_OK;
 	NULL_CHECK(dhd, "dhd is NULL", err);
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	return (_dhd_pno_enable(dhd, enable));
 }
 
@@ -849,17 +849,17 @@ dhd_pno_set_for_ssid(dhd_pub_t *dhd, wlc_ssid_t* ssid_list, int nssid,
 		err = BCME_BADOPTION;
 		goto exit;
 	}
-	DHD_PNO(("%s enter : scan_fr :%d, pno_repeat :%d,"
+	AP6210_DEBUG("%s enter : scan_fr :%d, pno_repeat :%d,"
 			"pno_freq_expo_max: %d, nchan :%d\n", __FUNCTION__,
-			scan_fr, pno_repeat, pno_freq_expo_max, nchan));
+			scan_fr, pno_repeat, pno_freq_expo_max, nchan);
 
 	_params = &(_pno_state->pno_params_arr[INDEX_OF_LEGACY_PARAMS]);
 	if (!(_pno_state->pno_mode & DHD_PNO_LEGACY_MODE)) {
 		_pno_state->pno_mode |= DHD_PNO_LEGACY_MODE;
 		err = _dhd_pno_reinitialize_prof(dhd, _params, DHD_PNO_LEGACY_MODE);
 		if (err < 0) {
-			DHD_ERROR(("%s : failed to reinitialize profile (err %d)\n",
-				__FUNCTION__, err));
+			AP6210_ERR("%s : failed to reinitialize profile (err %d)\n",
+				__FUNCTION__, err);
 			goto exit;
 		}
 	}
@@ -870,14 +870,14 @@ dhd_pno_set_for_ssid(dhd_pub_t *dhd, wlc_ssid_t* ssid_list, int nssid,
 		_params->params_legacy.chan_list[i] = _chan_list[i] = channel_list[i];
 	}
 	if (_pno_state->pno_mode & (DHD_PNO_BATCH_MODE | DHD_PNO_HOTLIST_MODE)) {
-		DHD_PNO(("BATCH SCAN is on progress in firmware\n"));
+		AP6210_DEBUG("BATCH SCAN is on progress in firmware\n");
 		/* retrieve the batching data from firmware into host */
 		dhd_pno_get_for_batch(dhd, NULL, 0, PNO_STATUS_DISABLE);
 		/* store current pno_mode before disabling pno */
 		mode = _pno_state->pno_mode;
 		err = _dhd_pno_enable(dhd, PNO_OFF);
 		if (err < 0) {
-			DHD_ERROR(("%s : failed to disable PNO\n", __FUNCTION__));
+			AP6210_ERR("%s : failed to disable PNO\n", __FUNCTION__);
 			goto exit;
 		}
 		/* restore the previous mode */
@@ -891,14 +891,14 @@ dhd_pno_set_for_ssid(dhd_pub_t *dhd, wlc_ssid_t* ssid_list, int nssid,
 					_params2->params_batch.nchan,
 					&channel_list[0], nchan);
 				if (err < 0) {
-					DHD_ERROR(("%s : failed to merge channel list"
+					AP6210_ERR("%s : failed to merge channel list"
 					" between legacy and batch\n",
-						__FUNCTION__));
+						__FUNCTION__);
 					goto exit;
 				}
 			}  else {
-				DHD_PNO(("superset channel will use"
-				" all channels in firmware\n"));
+				AP6210_DEBUG("superset channel will use"
+				" all channels in firmware\n");
 			}
 		} else if (_pno_state->pno_mode & DHD_PNO_HOTLIST_MODE) {
 			_params2 = &(_pno_state->pno_params_arr[INDEX_OF_HOTLIST_PARAMS]);
@@ -908,9 +908,9 @@ dhd_pno_set_for_ssid(dhd_pub_t *dhd, wlc_ssid_t* ssid_list, int nssid,
 					_params2->params_hotlist.nchan,
 					&channel_list[0], nchan);
 				if (err < 0) {
-					DHD_ERROR(("%s : failed to merge channel list"
+					AP6210_ERR("%s : failed to merge channel list"
 					" between legacy and hotlist\n",
-						__FUNCTION__));
+						__FUNCTION__);
 					goto exit;
 				}
 			}
@@ -923,18 +923,18 @@ dhd_pno_set_for_ssid(dhd_pub_t *dhd, wlc_ssid_t* ssid_list, int nssid,
 	_params->params_legacy.nssid = nssid;
 	INIT_LIST_HEAD(&_params->params_legacy.ssid_list);
 	if ((err = _dhd_pno_set(dhd, _params, DHD_PNO_LEGACY_MODE)) < 0) {
-		DHD_ERROR(("failed to set call pno_set (err %d) in firmware\n", err));
+		AP6210_ERR("failed to set call pno_set (err %d) in firmware\n", err);
 		goto exit;
 	}
 	if ((err = _dhd_pno_add_ssid(dhd, ssid_list, nssid)) < 0) {
-		DHD_ERROR(("failed to add ssid list (err %d) in firmware\n", err));
+		AP6210_ERR("failed to add ssid list (err %d) in firmware\n", err);
 		goto exit;
 	}
 	for (i = 0; i < nssid; i++) {
 		_pno_ssid = kzalloc(sizeof(struct dhd_pno_ssid), GFP_KERNEL);
 		if (_pno_ssid == NULL) {
-			DHD_ERROR(("%s : failed to allocate struct dhd_pno_ssid\n",
-				__FUNCTION__));
+			AP6210_ERR("%s : failed to allocate struct dhd_pno_ssid\n",
+				__FUNCTION__);
 			goto exit;
 		}
 		_pno_ssid->SSID_len = ssid_list[i].SSID_len;
@@ -944,14 +944,14 @@ dhd_pno_set_for_ssid(dhd_pub_t *dhd, wlc_ssid_t* ssid_list, int nssid,
 	}
 	if (tot_nchan > 0) {
 		if ((err = _dhd_pno_cfg(dhd, _chan_list, tot_nchan)) < 0) {
-			DHD_ERROR(("%s : failed to set call pno_cfg (err %d) in firmware\n",
-				__FUNCTION__, err));
+			AP6210_ERR("%s : failed to set call pno_cfg (err %d) in firmware\n",
+				__FUNCTION__, err);
 			goto exit;
 		}
 	}
 	if (_pno_state->pno_status == DHD_PNO_DISABLED) {
 		if ((err = _dhd_pno_enable(dhd, PNO_ON)) < 0)
-			DHD_ERROR(("%s : failed to enable PNO\n", __FUNCTION__));
+			AP6210_ERR("%s : failed to enable PNO\n", __FUNCTION__);
 	}
 exit:
 	/* clear mode in case of error */
@@ -975,13 +975,13 @@ dhd_pno_set_for_batch(dhd_pub_t *dhd, struct dhd_pno_batch_params *batch_params)
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL", err);
 	NULL_CHECK(batch_params, "batch_params is NULL", err);
 	_pno_state = PNO_GET_PNOSTATE(dhd);
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	if (!dhd_support_sta_mode(dhd)) {
 		err = BCME_BADOPTION;
 		goto exit;
 	}
 	if (!WLS_SUPPORTED(_pno_state)) {
-		DHD_ERROR(("%s : wifi location service is not supported\n", __FUNCTION__));
+		AP6210_ERR("%s : wifi location service is not supported\n", __FUNCTION__);
 		err = BCME_UNSUPPORTED;
 		goto exit;
 	}
@@ -990,8 +990,8 @@ dhd_pno_set_for_batch(dhd_pub_t *dhd, struct dhd_pno_batch_params *batch_params)
 		_pno_state->pno_mode |= DHD_PNO_BATCH_MODE;
 		err = _dhd_pno_reinitialize_prof(dhd, _params, DHD_PNO_BATCH_MODE);
 		if (err < 0) {
-			DHD_ERROR(("%s : failed to call _dhd_pno_reinitialize_prof\n",
-				__FUNCTION__));
+			AP6210_ERR("%s : failed to call _dhd_pno_reinitialize_prof\n",
+				__FUNCTION__);
 			goto exit;
 		}
 	}
@@ -1012,8 +1012,8 @@ dhd_pno_set_for_batch(dhd_pub_t *dhd, struct dhd_pno_batch_params *batch_params)
 		&_params->params_batch.chan_list[batch_params->nchan],
 		&rem_nchan, batch_params->band, FALSE);
 		if (err < 0) {
-			DHD_ERROR(("%s: failed to get valid channel list(band : %d)\n",
-				__FUNCTION__, batch_params->band));
+			AP6210_ERR("%s: failed to get valid channel list(band : %d)\n",
+				__FUNCTION__, batch_params->band);
 			goto exit;
 		}
 		/* now we need to update nchan because rem_chan has valid channel count */
@@ -1024,11 +1024,11 @@ dhd_pno_set_for_batch(dhd_pub_t *dhd, struct dhd_pno_batch_params *batch_params)
 	}
 #ifdef PNO_DEBUG
 {
-		DHD_PNO(("Channel list : "));
+		AP6210_DEBUG("Channel list : ");
 		for (i = 0; i < _params->params_batch.nchan; i++) {
-			DHD_PNO(("%d ", _params->params_batch.chan_list[i]));
+			AP6210_DEBUG("%d ", _params->params_batch.chan_list[i]);
 		}
-		DHD_PNO(("\n"));
+		AP6210_DEBUG("\n");
 }
 #endif
 	if (_params->params_batch.nchan) {
@@ -1038,12 +1038,12 @@ dhd_pno_set_for_batch(dhd_pub_t *dhd, struct dhd_pno_batch_params *batch_params)
 	}
 	if (_pno_state->pno_mode & DHD_PNO_LEGACY_MODE) {
 		struct dhd_pno_ssid *iter, *next;
-		DHD_PNO(("PNO SSID is on progress in firmware\n"));
+		AP6210_DEBUG("PNO SSID is on progress in firmware\n");
 		/* store current pno_mode before disabling pno */
 		mode = _pno_state->pno_mode;
 		err = _dhd_pno_enable(dhd, PNO_OFF);
 		if (err < 0) {
-			DHD_ERROR(("%s : failed to disable PNO\n", __FUNCTION__));
+			AP6210_ERR("%s : failed to disable PNO\n", __FUNCTION__);
 			goto exit;
 		}
 		/* restore the previous mode */
@@ -1056,19 +1056,19 @@ dhd_pno_set_for_batch(dhd_pub_t *dhd, struct dhd_pno_batch_params *batch_params)
 				_params2->params_legacy.nchan,
 				&_params->params_batch.chan_list[0], _params->params_batch.nchan);
 			if (err < 0) {
-				DHD_ERROR(("%s : failed to merge channel list"
+				AP6210_ERR("%s : failed to merge channel list"
 				" between legacy and batch\n",
-					__FUNCTION__));
+					__FUNCTION__);
 				goto exit;
 			}
 		} else {
-			DHD_PNO(("superset channel will use all channels in firmware\n"));
+			AP6210_DEBUG("superset channel will use all channels in firmware\n");
 		}
 		p_ssid_list = kzalloc(sizeof(wlc_ssid_t) *
 							_params2->params_legacy.nssid, GFP_KERNEL);
 		if (p_ssid_list == NULL) {
-			DHD_ERROR(("%s : failed to allocate wlc_ssid_t array (count: %d)",
-				__FUNCTION__, _params2->params_legacy.nssid));
+			AP6210_ERR("%s : failed to allocate wlc_ssid_t array (count: %d)",
+				__FUNCTION__, _params2->params_legacy.nssid);
 			err = BCME_ERROR;
 			_pno_state->pno_mode &= ~DHD_PNO_LEGACY_MODE;
 			goto exit;
@@ -1082,13 +1082,13 @@ dhd_pno_set_for_batch(dhd_pub_t *dhd, struct dhd_pno_batch_params *batch_params)
 		}
 		if ((err = _dhd_pno_add_ssid(dhd, p_ssid_list,
 			_params2->params_legacy.nssid)) < 0) {
-			DHD_ERROR(("failed to add ssid list (err %d) in firmware\n", err));
+			AP6210_ERR("failed to add ssid list (err %d) in firmware\n", err);
 			goto exit;
 		}
 	}
 	if ((err = _dhd_pno_set(dhd, _params, DHD_PNO_BATCH_MODE)) < 0) {
-		DHD_ERROR(("%s : failed to set call pno_set (err %d) in firmware\n",
-			__FUNCTION__, err));
+		AP6210_ERR("%s : failed to set call pno_set (err %d) in firmware\n",
+			__FUNCTION__, err);
 		goto exit;
 	} else {
 		/* we need to return mscan */
@@ -1096,14 +1096,14 @@ dhd_pno_set_for_batch(dhd_pub_t *dhd, struct dhd_pno_batch_params *batch_params)
 	}
 	if (tot_nchan > 0) {
 		if ((err = _dhd_pno_cfg(dhd, _chan_list, tot_nchan)) < 0) {
-			DHD_ERROR(("%s : failed to set call pno_cfg (err %d) in firmware\n",
-				__FUNCTION__, err));
+			AP6210_ERR("%s : failed to set call pno_cfg (err %d) in firmware\n",
+				__FUNCTION__, err);
 			goto exit;
 		}
 	}
 	if (_pno_state->pno_status == DHD_PNO_DISABLED) {
 		if ((err = _dhd_pno_enable(dhd, PNO_ON)) < 0)
-			DHD_ERROR(("%s : failed to enable PNO\n", __FUNCTION__));
+			AP6210_ERR("%s : failed to enable PNO\n", __FUNCTION__);
 	}
 exit:
 	/* clear mode in case of error */
@@ -1138,16 +1138,16 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 		err = BCME_BADOPTION;
 		goto exit;
 	}
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	_pno_state = PNO_GET_PNOSTATE(dhd);
 
 	if (!WLS_SUPPORTED(_pno_state)) {
-		DHD_ERROR(("%s : wifi location service is not supported\n", __FUNCTION__));
+		AP6210_ERR("%s : wifi location service is not supported\n", __FUNCTION__);
 		err = BCME_UNSUPPORTED;
 		goto exit;
 	}
 	if (!(_pno_state->pno_mode & DHD_PNO_BATCH_MODE)) {
-		DHD_ERROR(("%s: Batching SCAN mode is not enabled\n", __FUNCTION__));
+		AP6210_ERR("%s: Batching SCAN mode is not enabled\n", __FUNCTION__);
 		goto exit;
 	}
 	mutex_lock(&_pno_state->pno_mutex);
@@ -1155,8 +1155,8 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 	if (buf && bufsize) {
 		if (!list_empty(&_params->params_batch.get_batch.expired_scan_results_list)) {
 			/* need to check whether we have cashed data or not */
-			DHD_PNO(("%s: have cashed batching data in Driver\n",
-				__FUNCTION__));
+			AP6210_DEBUG("%s: have cashed batching data in Driver\n",
+				__FUNCTION__);
 			/* convert to results format */
 			goto convert_format;
 		} else {
@@ -1180,7 +1180,7 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 	pscan_results = (dhd_pno_scan_results_t *)MALLOC(dhd->osh, SCAN_RESULTS_SIZE);
 	if (pscan_results == NULL) {
 		err = BCME_NOMEM;
-		DHD_ERROR(("failed to allocate dhd_pno_scan_results_t\n"));
+		AP6210_ERR("failed to allocate dhd_pno_scan_results_t\n");
 		goto exit;
 	}
 	pscan_results->bestnetheader = NULL;
@@ -1192,7 +1192,7 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 	} else {
 		int _removed_scan_cnt;
 		/* remove oldest one and add new one */
-		DHD_PNO(("%s : Remove oldest node and add new one\n", __FUNCTION__));
+		AP6210_DEBUG("%s : Remove oldest node and add new one\n", __FUNCTION__);
 		_removed_scan_cnt = _dhd_pno_clear_all_batch_results(dhd,
 			&_params->params_batch.get_batch.scan_results_list, TRUE);
 		_params->params_batch.get_batch.tot_scan_cnt -= _removed_scan_cnt;
@@ -1201,29 +1201,29 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 	}
 	plbestnet = (wl_pfn_lscanresults_t *)MALLOC(dhd->osh, PNO_BESTNET_LEN);
 	NULL_CHECK(plbestnet, "failed to allocate buffer for bestnet", err);
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	memset(plbestnet, 0, PNO_BESTNET_LEN);
 	while (plbestnet->status != PFN_COMPLETE) {
 		memset(plbestnet, 0, PNO_BESTNET_LEN);
 		err = dhd_iovar(dhd, 0, "pfnlbest", (char *)plbestnet, PNO_BESTNET_LEN, 0);
 		if (err < 0) {
 			if (err == BCME_EPERM) {
-				DHD_ERROR(("we cannot get the batching data "
-					"during scanning in firmware, try again\n,"));
+				AP6210_ERR("we cannot get the batching data "
+					"during scanning in firmware, try again\n,");
 				msleep(500);
 				continue;
 			} else {
-				DHD_ERROR(("%s : failed to execute pfnlbest (err :%d)\n",
-					__FUNCTION__, err));
+				AP6210_ERR("%s : failed to execute pfnlbest (err :%d)\n",
+					__FUNCTION__, err);
 				goto exit;
 			}
 		}
-		DHD_PNO(("ver %d, status : %d, count %d\n", plbestnet->version,
-			plbestnet->status, plbestnet->count));
+		AP6210_DEBUG("ver %d, status : %d, count %d\n", plbestnet->version,
+			plbestnet->status, plbestnet->count);
 		if (plbestnet->version != PFN_SCANRESULT_VERSION) {
 			err = BCME_VERSION;
-			DHD_ERROR(("bestnet version(%d) is mismatch with Driver version(%d)\n",
-				plbestnet->version, PFN_SCANRESULT_VERSION));
+			AP6210_ERR("bestnet version(%d) is mismatch with Driver version(%d)\n",
+				plbestnet->version, PFN_SCANRESULT_VERSION);
 			goto exit;
 		}
 		plnetinfo = plbestnet->netinfo;
@@ -1232,7 +1232,7 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 			MALLOC(dhd->osh, BESTNET_ENTRY_SIZE);
 			if (pbestnet_entry == NULL) {
 				err = BCME_NOMEM;
-				DHD_ERROR(("failed to allocate dhd_pno_bestnet_entry\n"));
+				AP6210_ERR("failed to allocate dhd_pno_bestnet_entry\n");
 				goto exit;
 			}
 			pbestnet_entry->recorded_time = jiffies; /* record the current time */
@@ -1251,7 +1251,7 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 					if (pbestnet_entry)
 						MFREE(dhd->osh, pbestnet_entry,
 						BESTNET_ENTRY_SIZE);
-					DHD_ERROR(("failed to allocate dhd_pno_bestnet_entry\n"));
+					AP6210_ERR("failed to allocate dhd_pno_bestnet_entry\n");
 					goto exit;
 				}
 				/* increase total cnt of bestnet header */
@@ -1279,7 +1279,7 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 				/* if RSSI is positive value, we assume that
 				 * this scan is aborted by other scan
 				 */
-				DHD_PNO(("This scan is aborted\n"));
+				AP6210_DEBUG("This scan is aborted\n");
 				pbestnetheader->reason = (ENABLE << PNO_STATUS_ABORT);
 			}
 			pbestnet_entry->rtt0 = plnetinfo->rtt0;
@@ -1294,22 +1294,22 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 			/* increase best entry count */
 			pbestnetheader->tot_cnt++;
 			pbestnetheader->tot_size += BESTNET_ENTRY_SIZE;
-			DHD_PNO(("Header %d\n", pscan_results->cnt_header - 1));
-			DHD_PNO(("\tSSID : "));
+			AP6210_DEBUG("Header %d\n", pscan_results->cnt_header - 1);
+			AP6210_DEBUG("\tSSID : ");
 			for (j = 0; j < plnetinfo->pfnsubnet.SSID_len; j++)
-				DHD_PNO(("%c", plnetinfo->pfnsubnet.SSID[j]));
-			DHD_PNO(("\n"));
-			DHD_PNO(("\tBSSID: %02x:%02x:%02x:%02x:%02x:%02x\n",
+				AP6210_DEBUG("%c", plnetinfo->pfnsubnet.SSID[j]);
+			AP6210_DEBUG("\n");
+			AP6210_DEBUG("\tBSSID: %02x:%02x:%02x:%02x:%02x:%02x\n",
 				plnetinfo->pfnsubnet.BSSID.octet[0],
 				plnetinfo->pfnsubnet.BSSID.octet[1],
 				plnetinfo->pfnsubnet.BSSID.octet[2],
 				plnetinfo->pfnsubnet.BSSID.octet[3],
 				plnetinfo->pfnsubnet.BSSID.octet[4],
-				plnetinfo->pfnsubnet.BSSID.octet[5]));
-			DHD_PNO(("\tchannel: %d, RSSI: %d, timestamp: %d ms\n",
+				plnetinfo->pfnsubnet.BSSID.octet[5]);
+			AP6210_DEBUG("\tchannel: %d, RSSI: %d, timestamp: %d ms\n",
 				plnetinfo->pfnsubnet.channel,
-				plnetinfo->RSSI, plnetinfo->timestamp));
-			DHD_PNO(("\tRTT0 : %d, RTT1: %d\n", plnetinfo->rtt0, plnetinfo->rtt1));
+				plnetinfo->RSSI, plnetinfo->timestamp);
+			AP6210_DEBUG("\tRTT0 : %d, RTT1: %d\n", plnetinfo->rtt0, plnetinfo->rtt1);
 			plnetinfo++;
 		}
 	}
@@ -1334,7 +1334,7 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 convert_format:
 		err = _dhd_pno_convert_format(dhd, &_params->params_batch, buf, bufsize);
 		if (err < 0) {
-			DHD_ERROR(("failed to convert the data into upper layer format\n"));
+			AP6210_ERR("failed to convert the data into upper layer format\n");
 			goto exit;
 		}
 	}
@@ -1353,11 +1353,11 @@ _dhd_pno_get_batch_handler(struct work_struct *work)
 	dhd_pno_status_info_t *_pno_state;
 	dhd_pub_t *dhd;
 	struct dhd_pno_batch_params *params_batch;
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	_pno_state = container_of(work, struct dhd_pno_status_info, work);
 	dhd = _pno_state->dhd;
 	if (dhd == NULL) {
-		DHD_ERROR(("%s : dhd is NULL\n", __FUNCTION__));
+		AP6210_ERR("%s : dhd is NULL\n", __FUNCTION__);
 		return;
 	}
 	params_batch = &_pno_state->pno_params_arr[INDEX_OF_BATCH_PARAMS].params_batch;
@@ -1378,17 +1378,17 @@ dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 		err = BCME_BADOPTION;
 		goto exit;
 	}
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	_pno_state = PNO_GET_PNOSTATE(dhd);
 
 	if (!WLS_SUPPORTED(_pno_state)) {
-		DHD_ERROR(("%s : wifi location service is not supported\n", __FUNCTION__));
+		AP6210_ERR("%s : wifi location service is not supported\n", __FUNCTION__);
 		err = BCME_UNSUPPORTED;
 		goto exit;
 	}
 	params_batch = &_pno_state->pno_params_arr[INDEX_OF_BATCH_PARAMS].params_batch;
 	if (!(_pno_state->pno_mode & DHD_PNO_BATCH_MODE)) {
-		DHD_ERROR(("%s: Batching SCAN mode is not enabled\n", __FUNCTION__));
+		AP6210_ERR("%s: Batching SCAN mode is not enabled\n", __FUNCTION__);
 		goto exit;
 	}
 	params_batch->get_batch.buf = buf;
@@ -1413,19 +1413,19 @@ dhd_pno_stop_for_batch(dhd_pub_t *dhd)
 	NULL_CHECK(dhd, "dhd is NULL", err);
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL", err);
 	_pno_state = PNO_GET_PNOSTATE(dhd);
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	if (!dhd_support_sta_mode(dhd)) {
 		err = BCME_BADOPTION;
 		goto exit;
 	}
 	if (!WLS_SUPPORTED(_pno_state)) {
-		DHD_ERROR(("%s : wifi location service is not supported\n",
-			__FUNCTION__));
+		AP6210_ERR("%s : wifi location service is not supported\n",
+			__FUNCTION__);
 		err = BCME_UNSUPPORTED;
 		goto exit;
 	}
 	if (!(_pno_state->pno_mode & DHD_PNO_BATCH_MODE)) {
-		DHD_ERROR(("%s : PNO BATCH MODE is not enabled\n", __FUNCTION__));
+		AP6210_ERR("%s : PNO BATCH MODE is not enabled\n", __FUNCTION__);
 		goto exit;
 	}
 	_pno_state->pno_mode &= ~DHD_PNO_BATCH_MODE;
@@ -1442,8 +1442,8 @@ dhd_pno_stop_for_batch(dhd_pub_t *dhd)
 			p_ssid_list = kzalloc(sizeof(wlc_ssid_t) *
 				_params_legacy->nssid, GFP_KERNEL);
 			if (p_ssid_list == NULL) {
-				DHD_ERROR(("%s : failed to allocate wlc_ssid_t array (count: %d)",
-					__FUNCTION__, _params_legacy->nssid));
+				AP6210_ERR("%s : failed to allocate wlc_ssid_t array (count: %d)",
+					__FUNCTION__, _params_legacy->nssid);
 				err = BCME_ERROR;
 				_pno_state->pno_mode &= ~DHD_PNO_LEGACY_MODE;
 				goto exit;
@@ -1461,8 +1461,8 @@ dhd_pno_stop_for_batch(dhd_pub_t *dhd)
 				_params_legacy->nchan);
 			if (err < 0) {
 				_pno_state->pno_mode &= ~DHD_PNO_LEGACY_MODE;
-				DHD_ERROR(("%s : failed to restart legacy PNO scan(err: %d)\n",
-					__FUNCTION__, err));
+				AP6210_ERR("%s : failed to restart legacy PNO scan(err: %d)\n",
+					__FUNCTION__, err);
 				goto exit;
 			}
 		} else if (_pno_state->pno_mode & DHD_PNO_HOTLIST_MODE) {
@@ -1471,9 +1471,9 @@ dhd_pno_stop_for_batch(dhd_pub_t *dhd)
 			p_pfn_bssid = kzalloc(sizeof(wl_pfn_bssid_t) *
 				_params->params_hotlist.nbssid, GFP_KERNEL);
 			if (p_pfn_bssid == NULL) {
-				DHD_ERROR(("%s : failed to allocate wl_pfn_bssid_t array"
+				AP6210_ERR("%s : failed to allocate wl_pfn_bssid_t array"
 					" (count: %d)",
-					__FUNCTION__, _params->params_hotlist.nbssid));
+					__FUNCTION__, _params->params_hotlist.nbssid);
 				err = BCME_ERROR;
 				_pno_state->pno_mode &= ~DHD_PNO_HOTLIST_MODE;
 				goto exit;
@@ -1489,16 +1489,16 @@ dhd_pno_stop_for_batch(dhd_pub_t *dhd)
 			err = dhd_pno_set_for_hotlist(dhd, p_pfn_bssid, &_params->params_hotlist);
 			if (err < 0) {
 				_pno_state->pno_mode &= ~DHD_PNO_HOTLIST_MODE;
-				DHD_ERROR(("%s : failed to restart hotlist scan(err: %d)\n",
-					__FUNCTION__, err));
+				AP6210_ERR("%s : failed to restart hotlist scan(err: %d)\n",
+					__FUNCTION__, err);
 				goto exit;
 			}
 		}
 	} else {
 		err = _dhd_pno_clean(dhd);
 		if (err < 0) {
-			DHD_ERROR(("%s : failed to call _dhd_pno_clean (err: %d)\n",
-				__FUNCTION__, err));
+			AP6210_ERR("%s : failed to call _dhd_pno_clean (err: %d)\n",
+				__FUNCTION__, err);
 			goto exit;
 		}
 	}
@@ -1529,14 +1529,14 @@ dhd_pno_set_for_hotlist(dhd_pub_t *dhd, wl_pfn_bssid_t *p_pfn_bssid,
 	NULL_CHECK(hotlist_params, "hotlist_params is NULL", err);
 	NULL_CHECK(p_pfn_bssid, "p_pfn_bssid is NULL", err);
 	_pno_state = PNO_GET_PNOSTATE(dhd);
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 
 	if (!dhd_support_sta_mode(dhd)) {
 		err = BCME_BADOPTION;
 		goto exit;
 	}
 	if (!WLS_SUPPORTED(_pno_state)) {
-		DHD_ERROR(("%s : wifi location service is not supported\n", __FUNCTION__));
+		AP6210_ERR("%s : wifi location service is not supported\n", __FUNCTION__);
 		err = BCME_UNSUPPORTED;
 		goto exit;
 	}
@@ -1545,8 +1545,8 @@ dhd_pno_set_for_hotlist(dhd_pub_t *dhd, wl_pfn_bssid_t *p_pfn_bssid,
 		_pno_state->pno_mode |= DHD_PNO_HOTLIST_MODE;
 		err = _dhd_pno_reinitialize_prof(dhd, _params, DHD_PNO_HOTLIST_MODE);
 		if (err < 0) {
-			DHD_ERROR(("%s : failed to call _dhd_pno_reinitialize_prof\n",
-				__FUNCTION__));
+			AP6210_ERR("%s : failed to call _dhd_pno_reinitialize_prof\n",
+				__FUNCTION__);
 			goto exit;
 		}
 	}
@@ -1564,8 +1564,8 @@ dhd_pno_set_for_hotlist(dhd_pub_t *dhd, wl_pfn_bssid_t *p_pfn_bssid,
 		&_params->params_hotlist.chan_list[hotlist_params->nchan],
 		&rem_nchan, hotlist_params->band, FALSE);
 		if (err < 0) {
-			DHD_ERROR(("%s: failed to get valid channel list(band : %d)\n",
-				__FUNCTION__, hotlist_params->band));
+			AP6210_ERR("%s: failed to get valid channel list(band : %d)\n",
+				__FUNCTION__, hotlist_params->band);
 			goto exit;
 		}
 		/* now we need to update nchan because rem_chan has valid channel count */
@@ -1577,11 +1577,11 @@ dhd_pno_set_for_hotlist(dhd_pub_t *dhd, wl_pfn_bssid_t *p_pfn_bssid,
 #ifdef PNO_DEBUG
 {
 		int i;
-		DHD_PNO(("Channel list : "));
+		AP6210_DEBUG("Channel list : ");
 		for (i = 0; i < _params->params_batch.nchan; i++) {
-			DHD_PNO(("%d ", _params->params_batch.chan_list[i]));
+			AP6210_DEBUG("%d ", _params->params_batch.chan_list[i]);
 		}
-		DHD_PNO(("\n"));
+		AP6210_DEBUG("\n");
 }
 #endif
 	if (_params->params_hotlist.nchan) {
@@ -1591,12 +1591,12 @@ dhd_pno_set_for_hotlist(dhd_pub_t *dhd, wl_pfn_bssid_t *p_pfn_bssid,
 		tot_nchan = _params->params_hotlist.nchan;
 	}
 	if (_pno_state->pno_mode & DHD_PNO_LEGACY_MODE) {
-			DHD_PNO(("PNO SSID is on progress in firmware\n"));
+			AP6210_DEBUG("PNO SSID is on progress in firmware\n");
 			/* store current pno_mode before disabling pno */
 			mode = _pno_state->pno_mode;
 			err = _dhd_pno_enable(dhd, PNO_OFF);
 			if (err < 0) {
-				DHD_ERROR(("%s : failed to disable PNO\n", __FUNCTION__));
+				AP6210_ERR("%s : failed to disable PNO\n", __FUNCTION__);
 				goto exit;
 			}
 			/* restore the previous mode */
@@ -1611,9 +1611,9 @@ dhd_pno_set_for_hotlist(dhd_pub_t *dhd, wl_pfn_bssid_t *p_pfn_bssid,
 					&_params->params_hotlist.chan_list[0],
 					_params->params_hotlist.nchan);
 				if (err < 0) {
-					DHD_ERROR(("%s : failed to merge channel list"
+					AP6210_ERR("%s : failed to merge channel list"
 						"between legacy and hotlist\n",
-						__FUNCTION__));
+						__FUNCTION__);
 					goto exit;
 				}
 			}
@@ -1624,19 +1624,19 @@ dhd_pno_set_for_hotlist(dhd_pub_t *dhd, wl_pfn_bssid_t *p_pfn_bssid,
 
 	err = _dhd_pno_add_bssid(dhd, p_pfn_bssid, hotlist_params->nbssid);
 	if (err < 0) {
-		DHD_ERROR(("%s : failed to call _dhd_pno_add_bssid(err :%d)\n",
-			__FUNCTION__, err));
+		AP6210_ERR("%s : failed to call _dhd_pno_add_bssid(err :%d)\n",
+			__FUNCTION__, err);
 		goto exit;
 	}
 	if ((err = _dhd_pno_set(dhd, _params, DHD_PNO_HOTLIST_MODE)) < 0) {
-		DHD_ERROR(("%s : failed to set call pno_set (err %d) in firmware\n",
-			__FUNCTION__, err));
+		AP6210_ERR("%s : failed to set call pno_set (err %d) in firmware\n",
+			__FUNCTION__, err);
 		goto exit;
 	}
 	if (tot_nchan > 0) {
 		if ((err = _dhd_pno_cfg(dhd, _chan_list, tot_nchan)) < 0) {
-			DHD_ERROR(("%s : failed to set call pno_cfg (err %d) in firmware\n",
-				__FUNCTION__, err));
+			AP6210_ERR("%s : failed to set call pno_cfg (err %d) in firmware\n",
+				__FUNCTION__, err);
 			goto exit;
 		}
 	}
@@ -1650,7 +1650,7 @@ dhd_pno_set_for_hotlist(dhd_pub_t *dhd, wl_pfn_bssid_t *p_pfn_bssid,
 	_params->params_hotlist.nbssid = hotlist_params->nbssid;
 	if (_pno_state->pno_status == DHD_PNO_DISABLED) {
 		if ((err = _dhd_pno_enable(dhd, PNO_ON)) < 0)
-			DHD_ERROR(("%s : failed to enable PNO\n", __FUNCTION__));
+			AP6210_ERR("%s : failed to enable PNO\n", __FUNCTION__);
 	}
 exit:
 	/* clear mode in case of error */
@@ -1672,15 +1672,15 @@ dhd_pno_stop_for_hotlist(dhd_pub_t *dhd)
 	_pno_state = PNO_GET_PNOSTATE(dhd);
 
 	if (!WLS_SUPPORTED(_pno_state)) {
-		DHD_ERROR(("%s : wifi location service is not supported\n",
-			__FUNCTION__));
+		AP6210_ERR("%s : wifi location service is not supported\n",
+			__FUNCTION__);
 		err = BCME_UNSUPPORTED;
 		goto exit;
 	}
 
 	if (!(_pno_state->pno_mode & DHD_PNO_HOTLIST_MODE)) {
-		DHD_ERROR(("%s : Hotlist MODE is not enabled\n",
-			__FUNCTION__));
+		AP6210_ERR("%s : Hotlist MODE is not enabled\n",
+			__FUNCTION__);
 		goto exit;
 	}
 	_pno_state->pno_mode &= ~DHD_PNO_BATCH_MODE;
@@ -1692,8 +1692,8 @@ dhd_pno_stop_for_hotlist(dhd_pub_t *dhd)
 		mode = _pno_state->pno_mode;
 		err = _dhd_pno_clean(dhd);
 		if (err < 0) {
-			DHD_ERROR(("%s : failed to call _dhd_pno_clean (err: %d)\n",
-				__FUNCTION__, err));
+			AP6210_ERR("%s : failed to call _dhd_pno_clean (err: %d)\n",
+				__FUNCTION__, err);
 			goto exit;
 		}
 		/* restore previos pno mode */
@@ -1707,8 +1707,8 @@ dhd_pno_stop_for_hotlist(dhd_pub_t *dhd)
 			p_ssid_list =
 			kzalloc(sizeof(wlc_ssid_t) * _params_legacy->nssid, GFP_KERNEL);
 			if (p_ssid_list == NULL) {
-				DHD_ERROR(("%s : failed to allocate wlc_ssid_t array (count: %d)",
-					__FUNCTION__, _params_legacy->nssid));
+				AP6210_ERR("%s : failed to allocate wlc_ssid_t array (count: %d)",
+					__FUNCTION__, _params_legacy->nssid);
 				err = BCME_ERROR;
 				_pno_state->pno_mode &= ~DHD_PNO_LEGACY_MODE;
 				goto exit;
@@ -1725,8 +1725,8 @@ dhd_pno_stop_for_hotlist(dhd_pub_t *dhd)
 				_params_legacy->nchan);
 			if (err < 0) {
 				_pno_state->pno_mode &= ~DHD_PNO_LEGACY_MODE;
-				DHD_ERROR(("%s : failed to restart legacy PNO scan(err: %d)\n",
-					__FUNCTION__, err));
+				AP6210_ERR("%s : failed to restart legacy PNO scan(err: %d)\n",
+					__FUNCTION__, err);
 				goto exit;
 			}
 		} else if (_pno_state->pno_mode & DHD_PNO_BATCH_MODE) {
@@ -1736,16 +1736,16 @@ dhd_pno_stop_for_hotlist(dhd_pub_t *dhd)
 			err = dhd_pno_set_for_batch(dhd, &_params->params_batch);
 			if (err < 0) {
 				_pno_state->pno_mode &= ~DHD_PNO_BATCH_MODE;
-				DHD_ERROR(("%s : failed to restart batch scan(err: %d)\n",
-					__FUNCTION__,  err));
+				AP6210_ERR("%s : failed to restart batch scan(err: %d)\n",
+					__FUNCTION__,  err);
 				goto exit;
 			}
 		}
 	} else {
 		err = _dhd_pno_clean(dhd);
 		if (err < 0) {
-			DHD_ERROR(("%s : failed to call _dhd_pno_clean (err: %d)\n",
-				__FUNCTION__, err));
+			AP6210_ERR("%s : failed to call _dhd_pno_clean (err: %d)\n",
+				__FUNCTION__, err);
 			goto exit;
 		}
 	}
@@ -1763,7 +1763,7 @@ dhd_pno_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL", err);
 	_pno_state = PNO_GET_PNOSTATE(dhd);
 	if (!WLS_SUPPORTED(_pno_state)) {
-		DHD_ERROR(("%s : wifi location service is not supported\n", __FUNCTION__));
+		AP6210_ERR("%s : wifi location service is not supported\n", __FUNCTION__);
 		err = BCME_UNSUPPORTED;
 		goto exit;
 	}
@@ -1771,7 +1771,7 @@ dhd_pno_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
 	flags = ntoh16(event->flags);
 	status = ntoh32(event->status);
 	datalen = ntoh32(event->datalen);
-	DHD_PNO(("%s enter : event_type :%d\n", __FUNCTION__, event_type));
+	AP6210_DEBUG("%s enter : event_type :%d\n", __FUNCTION__, event_type);
 	switch (event_type) {
 	case WLC_E_PFN_BSSID_NET_FOUND:
 	case WLC_E_PFN_BSSID_NET_LOST:
@@ -1782,7 +1782,7 @@ dhd_pno_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
 	{
 		struct dhd_pno_batch_params *params_batch;
 		params_batch = &_pno_state->pno_params_arr[INDEX_OF_BATCH_PARAMS].params_batch;
-		DHD_PNO(("%s : WLC_E_PFN_BEST_BATCHING\n", __FUNCTION__));
+		AP6210_DEBUG("%s : WLC_E_PFN_BEST_BATCHING\n", __FUNCTION__);
 		params_batch->get_batch.buf = NULL;
 		params_batch->get_batch.bufsize = 0;
 		params_batch->get_batch.reason = PNO_STATUS_EVENT;
@@ -1790,7 +1790,7 @@ dhd_pno_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
 		break;
 	}
 	default:
-		DHD_ERROR(("unknown event : %d\n", event_type));
+		AP6210_ERR("unknown event : %d\n", event_type);
 	}
 exit:
 	return err;
@@ -1801,7 +1801,7 @@ int dhd_pno_init(dhd_pub_t *dhd)
 	int err = BCME_OK;
 	dhd_pno_status_info_t *_pno_state;
 	NULL_CHECK(dhd, "dhd is NULL", err);
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	UNUSED_PARAMETER(_dhd_pno_suspend);
 	if (dhd->pno_state)
 		goto exit;
@@ -1818,8 +1818,8 @@ int dhd_pno_init(dhd_pub_t *dhd)
 	err = dhd_iovar(dhd, 0, "pfnlbest", NULL, 0, 0);
 	if (err == BCME_UNSUPPORTED) {
 		_pno_state->wls_supported = FALSE;
-		DHD_INFO(("Current firmware doesn't support"
-			" Android Location Service\n"));
+		AP6210_DEBUG("Current firmware doesn't support"
+			" Android Location Service\n");
 	}
 exit:
 	return err;
@@ -1829,7 +1829,7 @@ int dhd_pno_deinit(dhd_pub_t *dhd)
 	int err = BCME_OK;
 	dhd_pno_status_info_t *_pno_state = PNO_GET_PNOSTATE(dhd);
 	NULL_CHECK(dhd, "dhd is NULL", err);
-	DHD_PNO(("%s enter\n", __FUNCTION__));
+	AP6210_DEBUG("%s enter\n", __FUNCTION__);
 	cancel_work_sync(&_pno_state->work);
 	if (dhd->pno_state)
 		MFREE(dhd->osh, dhd->pno_state, sizeof(dhd_pno_status_info_t));

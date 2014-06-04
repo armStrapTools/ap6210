@@ -228,10 +228,10 @@ osl_attach(void *pdev, uint bustype, bool pkttag)
 	if (!bcm_static_buf) {
 		if (!(bcm_static_buf = (bcm_static_buf_t *)dhd_os_prealloc(osh, 3, STATIC_BUF_SIZE+
 			STATIC_BUF_TOTAL_LEN))) {
-			printk("can not alloc static buf!\n");
+			AP6210_DEBUG("can not alloc static buf!\n");
 		}
 		else
-			printk("alloc static buf at %x!\n", (unsigned int)bcm_static_buf);
+			AP6210_DEBUG("alloc static buf at %x!\n", (unsigned int)bcm_static_buf);
 
 
 		sema_init(&bcm_static_buf->static_sem, 1);
@@ -322,7 +322,7 @@ osl_ctfpool_add(osl_t *osh)
 	/* Allocate a new skb and add it to the ctfpool */
 	skb = osl_alloc_skb(osh->ctfpool->obj_size);
 	if (skb == NULL) {
-		printf("%s: skb alloc of len %d failed\n", __FUNCTION__,
+		AP6210_DEBUG("%s: skb alloc of len %d failed\n", __FUNCTION__,
 		       osh->ctfpool->obj_size);
 		CTFPOOL_UNLOCK(osh->ctfpool, flags);
 		return NULL;
@@ -668,7 +668,7 @@ osl_pktget_static(osl_t *osh, uint len)
 
 
 	if (len > DHD_SKB_MAX_BUFSIZE) {
-		printk("osl_pktget_static: Do we really need this big skb??"
+		AP6210_DEBUG("osl_pktget_static: Do we really need this big skb??"
 			" len=%d\n", len);
 		return osl_pktget(osh, len);
 	}
@@ -726,7 +726,7 @@ osl_pktget_static(osl_t *osh, uint len)
 #endif
 
 	up(&bcm_static_skb->osl_pkt_sem);
-	printk("osl_pktget_static: all static pkt in use!\n");
+	AP6210_DEBUG("osl_pktget_static: all static pkt in use!\n");
 	return osl_pktget(osh, len);
 }
 
@@ -880,7 +880,7 @@ osl_malloc(osl_t *osh, uint size)
 			if (i == STATIC_BUF_MAX_NUM)
 			{
 				up(&bcm_static_buf->static_sem);
-				printk("all static buff in use!\n");
+				AP6210_DEBUG("all static buff in use!\n");
 				goto original;
 			}
 
@@ -1020,7 +1020,7 @@ osl_assert(const char *exp, const char *file, int line)
 	snprintf(tempbuf, 64, "\"%s\": file \"%s\", line %d\n",
 		exp, basename, line);
 
-	printk("%s", tempbuf);
+	AP6210_DEBUG("%s", tempbuf);
 
 
 }

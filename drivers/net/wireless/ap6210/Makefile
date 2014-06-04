@@ -18,7 +18,8 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Dlinux -DBCMDRIVER                \
 DHDOFILES = aiutils.o bcmsdh_sdmmc_linux.o dhd_linux.o siutils.o bcmutils.o   \
 	dhd_linux_sched.o dhd_sdio.o bcmwifi_channels.o bcmevent.o hndpmu.o   \
 	bcmsdh.o dhd_cdc.o bcmsdh_linux.o dhd_common.o linux_osl.o            \
-	bcmsdh_sdmmc.o dhd_custom_gpio.o sbutils.o wldev_common.o wl_android.o
+	bcmsdh_sdmmc.o dhd_custom_gpio.o sbutils.o wldev_common.o wl_android.o \
+	ap6210_gpio_wifi.o ap6210_gpio_bt.o
 
 obj-$(CONFIG_AP6210) += ap6210.o
 ap6210-objs += $(DHDOFILES)
@@ -48,6 +49,7 @@ DHDCFLAGS += -DCUSTOM_ROAM_TRIGGER_SETTING=-65
 DHDCFLAGS += -DCUSTOM_ROAM_DELTA_SETTING=15
 DHDCFLAGS += -DCUSTOM_KEEP_ALIVE_SETTING=28000
 DHDCFLAGS += -DCUSTOM_PNO_EVENT_LOCK_xTIME=7
+DHDCFLAGS += -fno-aggressive-loop-optimizations
 endif
 ifneq ($(CONFIG_DHD_USE_SCHED_SCAN),)
 DHDCFLAGS += -DWL_SCHED_SCAN
@@ -59,5 +61,5 @@ endif
 
 # GPIO Power Management Modules
 
-obj-$(CONFIG_AP6210) += ap6210_gpio_wifi.o
-obj-$(CONFIG_AP6210) += ap6210_gpio_bt.o
+#obj-$(CONFIG_AP6210) += ap6210_gpio_wifi.o
+#obj-$(CONFIG_AP6210) += ap6210_gpio_bt.o
